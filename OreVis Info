@@ -1,0 +1,56 @@
+import matplotlib.pyplot as plt
+import matplotlib.patches as patches
+from matplotlib.gridspec import GridSpec
+import datetime
+
+# Setup
+plt.style.use('bmh')
+fig = plt.figure(figsize=(14, 10))
+fig.patch.set_facecolor('#f4f4f4')
+gs = GridSpec(2, 2, height_ratios=[1.5, 1], width_ratios=[1.2, 1])
+
+# --- 1. SCHEMATIC DIAGRAM ---
+ax1 = fig.add_subplot(gs[0, 0])
+ax1.set_xlim(0, 10); ax1.set_ylim(0, 10); ax1.axis('off')
+ax1.set_title("Hardware Topology: Vehicle-Integrated Rover", fontsize=14, fontweight='bold', color='#2c3e50')
+
+# Roof Box
+ax1.add_patch(patches.FancyBboxPatch((2, 6.5), 6, 2.5, boxstyle="round,pad=0.2", ec="#e74c3c", fc="#ecf0f1", lw=2))
+ax1.text(2.2, 8.7, "ROOF SLED (Exterior)", fontsize=10, fontweight='bold', color="#c0392b")
+ax1.text(2.5, 7.5, "• S25 Ultra (OreVis NPU)\n• Active Cooling Fan\n• N52 Magnetic Mount", fontsize=9)
+
+# Cab Box
+ax1.add_patch(patches.FancyBboxPatch((2, 1), 6, 3, boxstyle="round,pad=0.2", ec="#2980b9", fc="#ecf0f1", lw=2))
+ax1.text(2.2, 3.7, "OPERATOR CAB (Interior)", fontsize=10, fontweight='bold', color="#2980b9")
+ax1.text(2.5, 2.2, "• Vehicle 12V Power\n• USB-C Hub\n• xReal Glasses (User)", fontsize=9)
+
+# Cable
+ax1.annotate("", xy=(5, 4.2), xytext=(5, 6.3), arrowprops=dict(arrowstyle="<->", lw=3, color="#34495e"))
+ax1.text(5.2, 5.2, "3M Active Cable", fontsize=9, fontweight='bold', color="#34495e")
+
+# --- 2. SAFETY LOGIC ---
+ax2 = fig.add_subplot(gs[0, 1])
+ax2.set_xlim(0, 10); ax2.set_ylim(0, 10); ax2.axis('off')
+ax2.set_title("Velocity Interlock Logic", fontsize=14, fontweight='bold', color='#2c3e50')
+ax2.text(5, 8, "Speed > 8 km/h", ha="center", bbox=dict(boxstyle="round", fc="white"))
+ax2.arrow(5, 7.3, 0, -1, head_width=0.3, fc='k')
+ax2.text(5, 5, "TRIGGER LOCKOUT", ha="center", bbox=dict(boxstyle="darrow", fc="#f1c40f"))
+ax2.arrow(5, 4, 0, -1, head_width=0.3, fc='k')
+ax2.text(5, 2, "SCREEN OFF", ha="center", bbox=dict(boxstyle="round", fc="#e74c3c", ec="red"), color="white", fontweight='bold')
+
+# --- 3. TIMELINE ---
+ax3 = fig.add_subplot(gs[1, :])
+ax3.set_title("Timeline (Extended to April 1)", fontsize=14, fontweight='bold', color='#2c3e50')
+tasks = ['Procurement/Fab', 'Safety Dev', 'Testing', 'DEPLOY']
+dates = [datetime.date(2026,1,9), datetime.date(2026,2,15), datetime.date(2026,3,7), datetime.date(2026,4,1)]
+widths = [37, 20, 24, 5]
+colors = ['#95a5a6', '#f39c12', '#3498db', '#27ae60']
+
+for i, (t, d, w, c) in enumerate(zip(tasks, dates, widths, colors)):
+    ax3.barh(i, w, left=d, height=0.5, color=c, alpha=0.8)
+    ax3.text(d, i+0.4, f"{t}", fontsize=10, fontweight='bold')
+
+ax3.invert_yaxis(); ax3.xaxis_date(); ax3.grid(axis='x', linestyle='--')
+plt.tight_layout()
+plt.savefig('minarvis_infographic.png')
+print("Infographic saved.")
