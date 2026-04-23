@@ -3,10 +3,13 @@
 #include "OreVisARGameMode.h"
 
 #include "ARPlaceableActor.h"
+#include "ARSpawnButtonWidget.h"
+#include "Blueprint/UserWidget.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "OreVisAR.h"
 #include "OreVisARPawn.h"
+#include "StartupTachoWidget.h"
 
 AOreVisARGameMode::AOreVisARGameMode()
 {
@@ -20,21 +23,25 @@ void AOreVisARGameMode::StartPlay()
 
 	APlayerController* PC = GetWorld()->GetFirstPlayerController();
 	AOreVisARPawn* Pawn = PC ? Cast<AOreVisARPawn>(PC->GetPawn()) : nullptr;
-	if (!Pawn)
+	if (Pawn)
 	{
-		UE_LOG(LogOreVisAR, Warning, TEXT("StartPlay: no OreVisARPawn found; skipping scatter."));
-		return;
+		// Keep the pawn's clamp radius in sync with the game mode config.
+		Pawn->MaxPlacementRadiusCm = MaxPlacementRadiusCm;
+	}
+	else
+	{
+		UE_LOG(LogOreVisAR, Warning, TEXT("StartPlay: no OreVisARPawn found."));
 	}
 
-	// Keep the pawn's clamp radius in sync with the game mode config so a
-	// single value drives both spawn scatter and runtime clamping.
-	Pawn->MaxPlacementRadiusCm = MaxPlacementRadiusCm;
-	ScatterInitialObjects(Pawn);
+	CreateHUDWidgets();
+	// Note: scatter is deferred — the pawn triggers ScatterInitialObjects()
+	// once `EARSessionStatus::Running` is reported so we don't spawn objects
+	// into an un-tracked world.
 }
 
 void AOreVisARGameMode::ScatterInitialObjects(AOreVisARPawn* Pawn)
 {
-	if (!PlaceableClass || InitialObjectCount <= 0)
+	if (!Pawn || !PlaceableClass || InitialObjectCount <= 0)
 	{
 		return;
 	}
@@ -42,8 +49,6 @@ void AOreVisARGameMode::ScatterInitialObjects(AOreVisARPawn* Pawn)
 	const FVector Origin = Pawn->GetActorLocation();
 	const FRotator PawnRot = Pawn->GetActorRotation();
 
-	// Spread objects in a forward-biased arc so they land in the user's
-	// field of view when the session starts.
 	for (int32 i = 0; i < InitialObjectCount; ++i)
 	{
 		const float Yaw = FMath::FRandRange(-60.f, 60.f);
@@ -56,9 +61,35 @@ void AOreVisARGameMode::ScatterInitialObjects(AOreVisARPawn* Pawn)
 		FActorSpawnParameters Params;
 		Params.SpawnCollisionHandlingOverride =
 			ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-		GetWorld()->SpawnActor<AARPlaceableActor>(PlaceableClass, Location, FRotator::ZeroRotator, Params);
+		GetWorld()->SpawnActor<AARPlaceableActor>(PlaceableClass, Location,
+			FRotator::ZeroRotator, Params);
 	}
 
 	UE_LOG(LogOreVisAR, Log, TEXT("Scattered %d AR placeables within %.0fcm."),
 		InitialObjectCount, MaxPlacementRadiusCm);
+}
+
+void AOreVisARGameMode::CreateHUDWidgets()
+{
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (!PC)
+	{
+		return;
+	}
+
+	if (StartupTachoWidgetClass)
+	{
+		StartupTachoWidget = CreateWidget<UUserWidget>(PC, StartupTachoWidgetClass);
+		if (StartupTachoWidget) { StartupTachoWidget->AddToViewport(10); }
+	}
+	if (SecondaryTachoWidgetClass)
+	{
+		SecondaryTachoWidget = CreateWidget<UUserWidget>(PC, SecondaryTachoWidgetClass);
+		if (SecondaryTachoWidget) { SecondaryTachoWidget->AddToViewport(10); }
+	}
+	if (SpawnButtonWidgetClass)
+	{
+		SpawnButtonWidget = CreateWidget<UUserWidget>(PC, SpawnButtonWidgetClass);
+		if (SpawnButtonWidget) { SpawnButtonWidget->AddToViewport(5); }
+	}
 }

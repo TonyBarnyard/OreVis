@@ -18,14 +18,14 @@ public class OreVisAR : ModuleRules
 			"AugmentedReality",
 			"ARUtilities",
 			"HeadMountedDisplay",
-			"XRBase"
+			"XRBase",
+			"UMG"                     // widget classes ship in this module's public API
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
 			"Slate",
 			"SlateCore",
-			"UMG",
 			"RenderCore",
 			"RHI"
 		});

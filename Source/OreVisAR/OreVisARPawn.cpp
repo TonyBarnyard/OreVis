@@ -5,14 +5,18 @@
 #include "ARPlaceableActor.h"
 #include "ARBlueprintLibrary.h"
 #include "ARSessionConfig.h"
+#include "ARTypes.h"
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "GameFramework/GameModeBase.h"
 #include "GameFramework/PlayerController.h"
 #include "InputActionValue.h"
 #include "OreVisAR.h"
+#include "OreVisARGameMode.h"
+#include "OreVisStartupSubsystem.h"
 
 AOreVisARPawn::AOreVisARPawn()
 {
@@ -32,14 +36,19 @@ void AOreVisARPawn::BeginPlay()
 {
 	Super::BeginPlay();
 
+	UOreVisStartupSubsystem* Startup = UOreVisStartupSubsystem::Get(this);
+
 	if (ARConfig)
 	{
+		if (Startup) { Startup->SetStage(EOreVisStartupStage::StartingARSession); }
 		UARBlueprintLibrary::StartARSession(ARConfig);
+		if (Startup) { Startup->SetStage(EOreVisStartupStage::WaitingForTracking); }
 	}
 	else
 	{
 		UE_LOG(LogOreVisAR, Warning,
 			TEXT("AOreVisARPawn has no ARSessionConfig assigned — AR session not started."));
+		if (Startup) { Startup->ForceStage(EOreVisStartupStage::Failed); }
 	}
 
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
@@ -72,12 +81,66 @@ void AOreVisARPawn::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	// Once AR tracking goes live, bump the startup tacho through the
+	// scatter → ready transition and let the game mode drop the initial
+	// objects. Done once per session.
+	if (!bInitialSpawnComplete)
+	{
+		const EARSessionStatus Status = UARBlueprintLibrary::GetARSessionStatus().Status;
+		if (Status == EARSessionStatus::Running)
+		{
+			UOreVisStartupSubsystem* Startup = UOreVisStartupSubsystem::Get(this);
+			if (Startup) { Startup->SetStage(EOreVisStartupStage::ScatteringObjects); }
+
+			if (AOreVisARGameMode* GM = GetWorld()->GetAuthGameMode<AOreVisARGameMode>())
+			{
+				GM->ScatterInitialObjects(this);
+			}
+
+			if (Startup) { Startup->SetStage(EOreVisStartupStage::Ready); }
+			bInitialSpawnComplete = true;
+		}
+	}
+
 	// Safety net: if any placeable drifts beyond the allowed radius (e.g.
 	// the user walks away from it), pull it back to the boundary.
 	for (TActorIterator<AARPlaceableActor> It(GetWorld()); It; ++It)
 	{
 		ClampToPlacementRadius(*It);
 	}
+}
+
+AARPlaceableActor* AOreVisARPawn::SpawnPlaceableInFront(float DistanceCm,
+	TSubclassOf<AARPlaceableActor> ClassOverride)
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	TSubclassOf<AARPlaceableActor> Class = ClassOverride;
+	if (!Class)
+	{
+		if (AOreVisARGameMode* GM = World->GetAuthGameMode<AOreVisARGameMode>())
+		{
+			Class = GM->PlaceableClass;
+		}
+	}
+	if (!Class)
+	{
+		Class = AARPlaceableActor::StaticClass();
+	}
+
+	const float ClampedDistance = FMath::Clamp(DistanceCm, 50.0f, MaxPlacementRadiusCm);
+	const FVector CamLoc = Camera ? Camera->GetComponentLocation() : GetActorLocation();
+	const FVector Forward = Camera ? Camera->GetForwardVector() : GetActorForwardVector();
+	const FVector SpawnLoc = CamLoc + Forward * ClampedDistance;
+
+	FActorSpawnParameters Params;
+	Params.SpawnCollisionHandlingOverride =
+		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	return World->SpawnActor<AARPlaceableActor>(Class, SpawnLoc, FRotator::ZeroRotator, Params);
 }
 
 void AOreVisARPawn::SetupPlayerInputComponent(UInputComponent* InputComp)

@@ -20,14 +20,17 @@ Config/
   DefaultGame.ini              Project name + AR tunables
   DefaultInput.ini             Touch + Enhanced Input defaults
 Source/
-  OreVisAR.Target.cs           Game build target (Android)
-  OreVisAREditor.Target.cs     Editor build target
+  OreVisAR.Target.cs              Game build target (Android)
+  OreVisAREditor.Target.cs        Editor build target
   OreVisAR/
-    OreVisAR.Build.cs          Module dependencies
-    OreVisAR.{h,cpp}           Primary game module
-    OreVisARGameMode.{h,cpp}   Spawns initial objects around the player
-    OreVisARPawn.{h,cpp}       Starts AR session, routes touch input
-    ARPlaceableActor.{h,cpp}   Object that can be grabbed, moved, scaled
+    OreVisAR.Build.cs             Module dependencies
+    OreVisAR.{h,cpp}              Primary game module
+    OreVisARGameMode.{h,cpp}      Spawns objects, creates HUD widgets
+    OreVisARPawn.{h,cpp}          Starts AR session, drives stage transitions
+    ARPlaceableActor.{h,cpp}      Object that can be grabbed, moved, scaled
+    OreVisStartupSubsystem.{h,cpp} 0–100% startup progress tracker
+    StartupTachoWidget.{h,cpp}    Sample HUD tacho bound to the subsystem
+    ARSpawnButtonWidget.{h,cpp}   Sample tap-to-spawn HUD button
 ```
 
 ## How the interaction works
@@ -44,6 +47,57 @@ tracking). Enhanced Input feeds three actions into `AOreVisARPawn`:
 Every placeable is kept within `MaxPlacementRadiusCm` (default **1000 cm = 10 m**)
 of the pawn, both during drag (`MoveGrabbedAlongView` deprojects at grab-time
 distance and then clamps) and on Tick (`ClampToPlacementRadius`).
+
+## Startup progress (0 → 100%) and sample HUD
+
+`UOreVisStartupSubsystem` (a `UGameInstanceSubsystem`) drives a single float
+that ticks from 0 to 1 as the AR app boots. Every stage change fires
+`OnProgressChanged(Progress01, Stage)`:
+
+| Stage                | Percent | Trigger                                                        |
+| -------------------- | ------- | -------------------------------------------------------------- |
+| `NotStarted`         | 0%      | (default)                                                      |
+| `LoadingAssets`      | 10%     | `UOreVisStartupSubsystem::Initialize` runs                      |
+| `StartingARSession`  | 25%     | pawn `BeginPlay` just before `StartARSession`                  |
+| `WaitingForTracking` | 50%     | pawn `BeginPlay` just after `StartARSession`                   |
+| `ScatteringObjects`  | 75%     | pawn `Tick` detects `EARSessionStatus::Running`                |
+| `Ready`              | 100%    | initial objects scattered and the session is interactive       |
+
+### Sample widgets
+
+Two UMG base classes ship in the module. Create BP children in-editor for the
+visuals — the native hooks auto-wire themselves.
+
+**`UStartupTachoWidget`** — bind any of these optional sub-widgets in the BP:
+
+| Named widget     | Type          | Behavior                                                   |
+| ---------------- | ------------- | ---------------------------------------------------------- |
+| `ProgressBar`    | `UProgressBar`| Linear fill auto-driven from 0..1                          |
+| `StageLabel`     | `UTextBlock`  | "Waiting For Tracking", etc.                               |
+| `PercentLabel`   | `UTextBlock`  | "42%"                                                      |
+| `TachoImage`     | `UImage`      | The dynamic material's `Progress` scalar is driven         |
+
+For a true radial tachometer, put a `UImage` named `TachoImage` with a
+material that reads a `Progress` scalar parameter (use `M_RadialGauge` —
+a simple material that clips an annular arc by `Progress` works well). You
+can also override `OnTachoProgressUpdated(Progress, Stage)` in the BP to
+drive custom widget animations.
+
+`bHideWhenReady` (default true) collapses the widget `HideDelaySeconds`
+after hitting 100%.
+
+Place two instances to get *two* tachos — e.g. a big center dial plus a
+smaller corner readout — by assigning both `StartupTachoWidgetClass` and
+`SecondaryTachoWidgetClass` on the game mode.
+
+**`UARSpawnButtonWidget`** — tap to drop a new placeable `SpawnDistanceCm`
+in front of the camera. Bind a `UButton` named `SpawnButton` in the BP.
+
+Wire the widget classes on your `BP_OreVisARGameMode` defaults:
+
+- `StartupTachoWidgetClass  = WBP_StartupTacho`
+- `SecondaryTachoWidgetClass = WBP_CornerTacho` (optional)
+- `SpawnButtonWidgetClass   = WBP_ARSpawnButton`
 
 ## First-time setup in the Unreal editor
 
@@ -64,13 +118,23 @@ binary `.uasset` files and don't live in git):
    - `IMC_Default` — map `Touch1` to `IA_Touch`, add a `Touch` → `Axis2D`
      modifier for `IA_TouchMove`, and bind a pinch gesture (or a two-finger
      vertical swipe modifier) to `IA_Pinch`.
+3a. Create HUD widgets under `/Game/UI/`:
+   - `WBP_StartupTacho` — BP child of `UStartupTachoWidget`. Add a
+     `ProgressBar` named `ProgressBar`, a `TextBlock` named `PercentLabel`,
+     optionally a `TextBlock` named `StageLabel`, and optionally an `Image`
+     named `TachoImage` backed by a radial-fill material.
+   - `WBP_ARSpawnButton` — BP child of `UARSpawnButtonWidget`. Add a `Button`
+     named `SpawnButton` plus whatever icon/label you want inside it.
 4. Create a Blueprint child of `AOreVisARPawn` (e.g. `BP_AROrePawn`) and
    assign `ARConfig`, `InputMapping`, and the three `IA_*` assets in its
    defaults.
 5. Create a Blueprint child of `AOreVisARGameMode` (e.g. `BP_OreVisARGameMode`)
    and set:
-   - `DefaultPawnClass = BP_AROrePawn`
-   - `PlaceableClass   = AARPlaceableActor` (or a BP child with a custom mesh)
+   - `DefaultPawnClass          = BP_AROrePawn`
+   - `PlaceableClass            = AARPlaceableActor` (or a BP child with a custom mesh)
+   - `StartupTachoWidgetClass   = WBP_StartupTacho`
+   - `SpawnButtonWidgetClass    = WBP_ARSpawnButton`
+   - `SecondaryTachoWidgetClass = WBP_CornerTacho` (optional)
 6. In **Project Settings → Maps & Modes**, set `GlobalDefaultGameMode =
    BP_OreVisARGameMode`.
 

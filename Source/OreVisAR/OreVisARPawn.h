@@ -11,6 +11,7 @@ class UInputAction;
 class UInputMappingContext;
 class UARSessionConfig;
 class AARPlaceableActor;
+class UOreVisStartupSubsystem;
 struct FInputActionValue;
 
 /**
@@ -63,6 +64,15 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AR|Input")
 	TObjectPtr<UInputAction> IA_Pinch;      // 1D axis: pinch scale delta
 
+	/**
+	 * Spawn a new placeable at `DistanceCm` along the camera's forward axis.
+	 * If `ClassOverride` is null, asks the game mode for the default class.
+	 * Called by the `ARSpawnButtonWidget` sample HUD.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "AR")
+	AARPlaceableActor* SpawnPlaceableInFront(float DistanceCm = 200.0f,
+		TSubclassOf<AARPlaceableActor> ClassOverride = nullptr);
+
 protected:
 	UPROPERTY(VisibleAnywhere, Category = "AR")
 	TObjectPtr<UCameraComponent> Camera;
@@ -82,4 +92,7 @@ private:
 
 	/** Cached distance from pawn to the grabbed object at grab-time. */
 	float GrabDistance = 100.0f;
+
+	/** Set once AR tracking has gone live and the initial scatter has run. */
+	bool bInitialSpawnComplete = false;
 };
