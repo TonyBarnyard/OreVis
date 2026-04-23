@@ -1,0 +1,32 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.4",
+	"Category": "AR",
+	"Description": "OreVis AR — places movable 3D objects within 10m of the user, targeting Samsung Galaxy S24 driving XREAL Air/Light glasses.",
+	"Modules": [
+		{
+			"Name": "OreVisAR",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [
+				"Engine",
+				"AugmentedReality",
+				"HeadMountedDisplay",
+				"EnhancedInput"
+			]
+		}
+	],
+	"Plugins": [
+		{ "Name": "AugmentedReality",   "Enabled": true },
+		{ "Name": "ARUtilities",        "Enabled": true },
+		{ "Name": "GoogleARCore",       "Enabled": true, "SupportedTargetPlatforms": ["Android"] },
+		{ "Name": "OpenXR",             "Enabled": true },
+		{ "Name": "OpenXREyeTracker",   "Enabled": false },
+		{ "Name": "EnhancedInput",      "Enabled": true },
+		{ "Name": "XRBase",             "Enabled": true },
+		{ "Name": "XRVisualization",    "Enabled": true }
+	],
+	"TargetPlatforms": [
+		"Android"
+	]
+}
