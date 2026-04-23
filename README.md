@@ -101,8 +101,34 @@ Wire the widget classes on your `BP_OreVisARGameMode` defaults:
 
 ## First-time setup in the Unreal editor
 
-The C++ code is complete, but a few assets must be created in-editor (they are
-binary `.uasset` files and don't live in git):
+### Automated (recommended)
+
+The repo ships a one-shot Python bootstrapper that creates every editor
+asset (map, `UARSessionConfig`, `IA_*`, `IMC_Default`, `WBP_*`, BP children
+of the pawn + game mode) and wires the pawn/game-mode defaults together.
+
+1. Double-click `OreVisAR.uproject`. Unreal will prompt to compile the
+   `OreVisAR` C++ module on first launch — accept and wait.
+2. **Edit → Plugins**, enable (if not already): *Python Editor Script
+   Plugin*, *Editor Scripting Utilities*, *Enhanced Input*, *Augmented
+   Reality*, *Google ARCore*, *OpenXR*. Restart the editor.
+3. **Tools → Execute Python Script** → pick `Scripts/setup_orevis_assets.py`.
+   Watch the Output Log for `[OreVis setup] done.` — that prints the
+   remaining manual follow-ups (see below).
+4. Manual follow-ups the script can't do reliably across UE versions:
+   - Open `WBP_StartupTacho` → drop a `ProgressBar` (name `ProgressBar`) +
+     a `TextBlock` (name `PercentLabel`). Optionally a `StageLabel`
+     TextBlock and a `TachoImage` Image with a radial-fill material.
+   - Open `WBP_ARSpawnButton` → drop a `Button` (name `SpawnButton`) with
+     any icon/text inside it.
+   - Open `IMC_Default` → confirm Touch1 → IA_Touch binding; add a 2D
+     swizzle modifier on Touch1 for `IA_TouchMove`; wire `IA_Pinch` to a
+     Gesture / Touch2 chord per your preference.
+5. Package → **Platforms → Android (ASTC) → Package Project**.
+
+### Manual fallback
+
+If you'd rather click through everything by hand:
 
 1. Create `/Game/Maps/ARWorld` — an empty map with no skylight/directional
    light (AR uses a transparent background).
