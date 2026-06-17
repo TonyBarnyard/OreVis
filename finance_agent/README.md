@@ -63,6 +63,8 @@ You'll get an interactive prompt. Try:
 - "Can I retire at 60? I'm 35, have $80k saved, add $1,500/month at 6.5%,
   and want $60k/year in retirement."
 - "Estimate my 2025 federal tax: single, $120,000 gross, $10k to 401(k)."
+- "I'm selling stock with a $50k long-term gain; I'm single with $190k of other
+  income. What will I owe, and how can I reduce it?"
 
 CLI commands: `/help`, `/reset`, `/accounts`, `/db`, `/exit`.
 
@@ -91,9 +93,25 @@ python -m finance_agent.selftest
 
 **Advising:** `loan_amortization`, `investment_projection`, `savings_goal`,
 `retirement_projection`, `budget_analysis`, `net_worth`, `tax_estimate`,
-`financial_ratios`.
+`capital_gains_tax`, `financial_ratios`.
+
+**Knowledge bank:** `tax_strategies` — a queryable catalog of capital-gains
+reduction/deferral strategies (tax-loss harvesting, 0%-bracket harvesting, §121
+home exclusion, 1031 exchange, QSBS §1202, opportunity zones, donating
+appreciated stock, donor-advised funds, step-up in basis at death, installment
+sales, NIIT reduction, and more), each with how it works, who it fits, caveats
+(e.g. the wash-sale rule), and the IRC section. Built into `knowledge.py`.
 
 **Memory:** `set_profile`, `get_profile` (remembers client/business context).
+
+### Capital gains coverage
+
+`capital_gains_tax` models the real 2025 mechanics: short-term gains taxed as
+ordinary income, long-term gains stacked on top of other income into the
+0%/15%/20% brackets, plus the 3.8% Net Investment Income Tax and an optional
+flat state rate. The agent pairs it with `tax_strategies` to suggest concrete
+ways to reduce the bill. (Excludes AMT and the collectibles/§1250 special rates;
+planning estimate, not tax advice.)
 
 ## Scope & disclaimers
 

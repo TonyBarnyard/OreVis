@@ -286,6 +286,58 @@ _STD_DEDUCTION_2025 = {
     "single": 15000, "married_joint": 30000, "head_of_household": 22500,
 }
 
+# 2025 long-term capital-gains breakpoints (taxable income). Below ``zero_top``
+# the rate is 0%; up to ``fifteen_top`` it is 15%; above it is 20%.
+_LTCG_BREAKS_2025 = {
+    "single": {"zero_top": 48350, "fifteen_top": 533400},
+    "married_joint": {"zero_top": 96700, "fifteen_top": 600050},
+    "married_separate": {"zero_top": 48350, "fifteen_top": 300000},
+    "head_of_household": {"zero_top": 64750, "fifteen_top": 566700},
+}
+
+# Net Investment Income Tax: a flat 3.8% surtax. Thresholds are statutory (not
+# inflation-indexed) and apply to modified AGI (MAGI).
+_NIIT_RATE = 0.038
+_NIIT_THRESHOLDS = {
+    "single": 200000, "head_of_household": 200000,
+    "married_joint": 250000, "married_separate": 125000,
+}
+
+
+def _normalize_status(filing_status: str) -> str:
+    status = filing_status.lower().strip().replace(" ", "_")
+    aliases = {
+        "married": "married_joint", "mfj": "married_joint", "joint": "married_joint",
+        "mfs": "married_separate", "married_filing_separately": "married_separate",
+        "separate": "married_separate", "hoh": "head_of_household",
+    }
+    status = aliases.get(status, status)
+    if status not in _BRACKETS_2025 and status not in _LTCG_BREAKS_2025:
+        raise ValueError(
+            f"filing_status must be one of {sorted(_LTCG_BREAKS_2025)} "
+            f"(got '{filing_status}')."
+        )
+    return status
+
+
+def _ordinary_tax(taxable: float, status: str) -> tuple[float, float]:
+    """Return (tax, marginal_rate) on ordinary taxable income for a filing status.
+
+    ``married_separate`` falls back to single brackets (a close approximation for
+    a planning estimate)."""
+    brackets = _BRACKETS_2025.get(status) or _BRACKETS_2025["single"]
+    taxable = max(0.0, taxable)
+    tax = 0.0
+    marginal_rate = brackets[0][1]
+    for i, (floor, rate) in enumerate(brackets):
+        ceiling = brackets[i + 1][0] if i + 1 < len(brackets) else float("inf")
+        if taxable > floor:
+            tax += (min(taxable, ceiling) - floor) * rate
+            marginal_rate = rate
+        else:
+            break
+    return tax, marginal_rate
+
 
 def tax_estimate(gross_income: float, filing_status: str = "single",
                  pre_tax_deductions: float = 0.0,
@@ -297,33 +349,15 @@ def tax_estimate(gross_income: float, filing_status: str = "single",
     is larger. Excludes FICA, state/local tax, credits, AMT, and capital gains —
     this is a planning estimate, not tax advice or a filed return.
     """
-    status = filing_status.lower().strip().replace(" ", "_")
-    if status in ("married", "mfj", "joint"):
-        status = "married_joint"
-    if status in ("hoh",):
-        status = "head_of_household"
-    if status not in _BRACKETS_2025:
-        raise ValueError(
-            f"filing_status must be one of {sorted(_BRACKETS_2025)} (got '{filing_status}')."
-        )
+    status = _normalize_status(filing_status)
 
     gross = float(gross_income)
     agi = max(0.0, gross - float(pre_tax_deductions))
-    std = _STD_DEDUCTION_2025[status]
+    std = _STD_DEDUCTION_2025.get(status, _STD_DEDUCTION_2025["single"])
     deduction = max(std, float(itemized_deductions)) if itemized_deductions else std
     taxable = max(0.0, agi - deduction)
 
-    brackets = _BRACKETS_2025[status]
-    tax = 0.0
-    marginal_rate = brackets[0][1]
-    for i, (floor, rate) in enumerate(brackets):
-        ceiling = brackets[i + 1][0] if i + 1 < len(brackets) else float("inf")
-        if taxable > floor:
-            taxed_in_band = min(taxable, ceiling) - floor
-            tax += taxed_in_band * rate
-            marginal_rate = rate
-        else:
-            break
+    tax, marginal_rate = _ordinary_tax(taxable, status)
 
     return {
         "tax_year": tax_year,
@@ -342,6 +376,94 @@ def tax_estimate(gross_income: float, filing_status: str = "single",
         "disclaimer": "Simplified U.S. federal estimate for planning only. Excludes "
                       "FICA, state/local taxes, credits, AMT, and capital gains. "
                       "Not tax advice.",
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Capital gains tax (U.S. federal, simplified)
+# --------------------------------------------------------------------------- #
+def capital_gains_tax(filing_status: str = "single",
+                      long_term_gain: float = 0.0,
+                      short_term_gain: float = 0.0,
+                      other_taxable_income: float = 0.0,
+                      magi: float | None = None,
+                      state_rate_pct: float = 0.0,
+                      tax_year: int = 2025) -> dict:
+    """Estimate U.S. federal tax on capital gains.
+
+    Models the real mechanics:
+      * Short-term gains (assets held <= 1 year) are taxed as ORDINARY income —
+        their tax is the *incremental* ordinary tax they add on top of
+        ``other_taxable_income`` (your taxable income excluding these gains).
+      * Long-term gains (held > 1 year) get preferential 0%/15%/20% rates and are
+        "stacked" on top of ordinary income (including short-term gains) to find
+        which brackets they fill.
+      * The 3.8% Net Investment Income Tax (NIIT) applies to the lesser of net
+        investment income or the amount of MAGI above the statutory threshold.
+      * An optional flat ``state_rate_pct`` is applied to total gains for a rough
+        all-in figure.
+
+    Planning estimate only — excludes AMT, collectibles (28%) and unrecaptured
+    §1250 (25%) special rates, loss limits, and state nuances. Not tax advice.
+    """
+    status = _normalize_status(filing_status)
+    lt = max(0.0, float(long_term_gain))
+    st = max(0.0, float(short_term_gain))
+    ordinary = max(0.0, float(other_taxable_income))
+
+    # --- Short-term gains: incremental ordinary tax -----------------------
+    base_tax, _ = _ordinary_tax(ordinary, status)
+    with_st_tax, st_marginal = _ordinary_tax(ordinary + st, status)
+    short_term_tax = with_st_tax - base_tax
+
+    # --- Long-term gains: stack on top of ordinary income + short-term -----
+    breaks = _LTCG_BREAKS_2025[status]
+    z, f = breaks["zero_top"], breaks["fifteen_top"]
+    stack_base = ordinary + st          # LTCG sits above all ordinary income
+    band_top = stack_base + lt
+    amt_0 = max(0.0, min(band_top, z) - stack_base)
+    amt_15 = max(0.0, min(band_top, f) - max(stack_base, z))
+    amt_20 = max(0.0, band_top - max(stack_base, f))
+    long_term_tax = amt_15 * 0.15 + amt_20 * 0.20
+
+    # --- Net Investment Income Tax (3.8%) ---------------------------------
+    nii = lt + st
+    magi_val = (ordinary + st + lt) if magi is None else float(magi)
+    threshold = _NIIT_THRESHOLDS[status]
+    niit = _NIIT_RATE * min(nii, max(0.0, magi_val - threshold))
+
+    # --- Optional flat state tax ------------------------------------------
+    state_tax = (state_rate_pct / 100.0) * (lt + st)
+
+    federal_total = long_term_tax + short_term_tax + niit
+    total = federal_total + state_tax
+    blended = _round(100 * total / (lt + st)) if (lt + st) else 0.0
+
+    return {
+        "tax_year": tax_year,
+        "filing_status": status,
+        "long_term_gain": _round(lt),
+        "short_term_gain": _round(st),
+        "other_taxable_income": _round(ordinary),
+        "long_term_breakdown": {
+            "taxed_at_0pct": _round(amt_0),
+            "taxed_at_15pct": _round(amt_15),
+            "taxed_at_20pct": _round(amt_20),
+            "long_term_tax": _round(long_term_tax),
+        },
+        "short_term_tax": _round(short_term_tax),
+        "short_term_marginal_rate_pct": _round(st_marginal * 100),
+        "niit_3_8pct": _round(niit),
+        "magi_used": _round(magi_val),
+        "state_tax": _round(state_tax),
+        "total_federal_tax_on_gains": _round(federal_total),
+        "total_tax_on_gains": _round(total),
+        "net_after_tax_proceeds": _round((lt + st) - total),
+        "blended_rate_on_gains_pct": blended,
+        "disclaimer": "Simplified U.S. federal estimate for planning only. "
+                      "Excludes AMT, collectibles/§1250 special rates, capital-loss "
+                      "limits, and most state rules. Not tax advice. See the "
+                      "tax_strategies tool for ways to reduce these gains.",
     }
 
 

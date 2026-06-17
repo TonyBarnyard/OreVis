@@ -10,8 +10,11 @@ import math
 import os
 import tempfile
 
+import json
+
 from . import accounting as A
 from . import advising as F
+from . import knowledge as K
 from .store import Store
 
 
@@ -112,9 +115,72 @@ def test_advising():
     print("✓ advising: loans, projections, goals, tax, net worth, ratios, budget")
 
 
+def test_capital_gains():
+    # $20k long-term gain stacked above $50k ordinary income (single) -> all 15%.
+    cg = F.capital_gains_tax("single", long_term_gain=20000, other_taxable_income=50000)
+    _approx(cg["long_term_breakdown"]["long_term_tax"], 3000)
+    _approx(cg["total_tax_on_gains"], 3000)
+    assert cg["niit_3_8pct"] == 0
+
+    # 0%-bracket harvesting: $10k LT gain, only $30k other income -> $0 tax.
+    cg0 = F.capital_gains_tax("single", long_term_gain=10000, other_taxable_income=30000)
+    _approx(cg0["total_tax_on_gains"], 0)
+    _approx(cg0["long_term_breakdown"]["taxed_at_0pct"], 10000)
+
+    # NIIT kicks in: $50k LT gain over $190k ordinary income (single).
+    # LTCG: 50000*15% = 7500. NIIT: 3.8% * min(50000, 240000-200000=40000) = 1520.
+    cgn = F.capital_gains_tax("single", long_term_gain=50000, other_taxable_income=190000)
+    _approx(cgn["long_term_breakdown"]["long_term_tax"], 7500)
+    _approx(cgn["niit_3_8pct"], 1520)
+    _approx(cgn["total_tax_on_gains"], 9020)
+
+    # Short-term gain is taxed as ordinary income (incremental).
+    cgs = F.capital_gains_tax("single", short_term_gain=10000, other_taxable_income=60000)
+    assert cgs["short_term_tax"] > 0
+    assert cgs["long_term_breakdown"]["long_term_tax"] == 0
+
+    print("✓ capital gains: LT stacking, 0%-bracket, NIIT, short-term ordinary")
+
+
+def test_knowledge_and_dispatch():
+    from .store import Store
+    from .tools import HANDLERS, TOOLS, run_tool
+
+    # Knowledge bank returns facts + indexed strategies, and is queryable.
+    idx = K.tax_strategies()
+    assert idx["facts"]["tax_year"] == 2025
+    assert any(s["id"] == "tax_loss_harvesting" for s in idx["strategy_index"])
+    one = K.tax_strategies(strategy_id="primary_residence_121")
+    assert "121" in one["strategy"]["irc"]
+    hits = K.tax_strategies(query="real estate")
+    assert hits["match_count"] >= 1
+
+    # Tool registry is consistent and dispatch routes store vs pure tools.
+    names = {t["name"] for t in TOOLS}
+    assert names == set(HANDLERS), names ^ set(HANDLERS)
+
+    store = Store(os.path.join(tempfile.mkdtemp(), "dispatch.db"))
+    # Pure tool through the dispatcher (must NOT receive the store).
+    out = json.loads(run_tool(store, "capital_gains_tax",
+                              {"filing_status": "single", "long_term_gain": 20000,
+                               "other_taxable_income": 50000}))
+    _approx(out["total_tax_on_gains"], 3000)
+    # Store-backed tool through the dispatcher.
+    A2 = json.loads(run_tool(store, "seed_standard_chart", {}))
+    assert "added_codes" in A2
+    # Knowledge tool through the dispatcher.
+    strat = json.loads(run_tool(store, "tax_strategies", {"query": "charity"}))
+    assert strat["match_count"] >= 1
+    store.close()
+
+    print("✓ knowledge bank + tool dispatch (store vs pure routing)")
+
+
 def main() -> int:
     test_ledger()
     test_advising()
+    test_capital_gains()
+    test_knowledge_and_dispatch()
     print("\nAll self-tests passed.")
     return 0
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import json
 
-from . import accounting, advising
+from . import accounting, advising, knowledge
 from .store import Store
 
 
@@ -58,10 +58,22 @@ HANDLERS = {
     "budget_analysis": advising.budget_analysis,
     "net_worth": advising.net_worth,
     "tax_estimate": advising.tax_estimate,
+    "capital_gains_tax": advising.capital_gains_tax,
     "financial_ratios": advising.financial_ratios,
+    # Knowledge bank
+    "tax_strategies": knowledge.tax_strategies,
     # Profile
     "set_profile": set_profile,
     "get_profile": get_profile,
+}
+
+# Tools that operate on the ledger and therefore receive the Store; everything
+# else is a pure function and must NOT be handed the Store.
+STORE_TOOLS = {
+    "add_account", "seed_standard_chart", "list_accounts", "record_journal_entry",
+    "list_journal_entries", "general_ledger", "account_balance", "trial_balance",
+    "income_statement", "balance_sheet", "cash_flow_statement",
+    "set_profile", "get_profile",
 }
 
 
@@ -70,8 +82,9 @@ def run_tool(store: Store, name: str, tool_input: dict) -> str:
     handler = HANDLERS.get(name)
     if handler is None:
         return json.dumps({"error": f"Unknown tool '{name}'."})
+    args = tool_input or {}
     try:
-        result = handler(store, **(tool_input or {}))
+        result = handler(store, **args) if name in STORE_TOOLS else handler(**args)
         return json.dumps(result, default=str)
     except ValueError as e:
         return json.dumps({"error": str(e)})
@@ -287,6 +300,44 @@ TOOLS = [
             "pre_tax_deductions": {"type": "number", "description": "e.g. 401(k), HSA contributions."},
             "itemized_deductions": {"type": "number", "description": "If itemizing instead of standard."},
         }, ["gross_income"]),
+    },
+    {
+        "name": "capital_gains_tax",
+        "description": "Estimate U.S. federal tax on investment capital gains. "
+                       "Handles short-term (ordinary rates) vs long-term (0/15/20%) "
+                       "gains with proper bracket stacking, the 3.8% Net Investment "
+                       "Income Tax, and an optional flat state rate. Use whenever the "
+                       "user is selling assets, asks what they'll owe on a gain, or "
+                       "asks how to reduce capital-gains tax (then also call "
+                       "tax_strategies).",
+        "input_schema": _obj({
+            "filing_status": {"type": "string",
+                              "enum": ["single", "married_joint",
+                                       "married_separate", "head_of_household"]},
+            "long_term_gain": {"type": "number", "description": "Gain on assets held > 1 year."},
+            "short_term_gain": {"type": "number", "description": "Gain on assets held <= 1 year."},
+            "other_taxable_income": {"type": "number",
+                                     "description": "Taxable income excluding these gains "
+                                                    "(used to stack the gains into brackets)."},
+            "magi": {"type": "number", "description": "Modified AGI for NIIT; defaults to "
+                                                      "other income + gains if omitted."},
+            "state_rate_pct": {"type": "number", "description": "Optional flat state tax rate %."},
+        }, ["filing_status"]),
+    },
+    {
+        "name": "tax_strategies",
+        "description": "Query the capital-gains knowledge bank for ways to reduce or "
+                       "defer capital-gains taxes (e.g. tax-loss harvesting, 0%-bracket "
+                       "harvesting, §121 home exclusion, 1031 exchange, QSBS, donating "
+                       "appreciated stock, step-up at death, installment sales). Call "
+                       "this whenever the user asks how to lower, avoid, or defer taxes "
+                       "on a gain. Returns reference facts and a strategy index when "
+                       "called with no arguments.",
+        "input_schema": _obj({
+            "query": {"type": "string", "description": "Keyword filter, e.g. 'real estate', "
+                                                       "'charity', 'losses', 'retirement'."},
+            "strategy_id": {"type": "string", "description": "Fetch one strategy in full by id."},
+        }, []),
     },
     {
         "name": "financial_ratios",
