@@ -68,6 +68,29 @@ You'll get an interactive prompt. Try:
 
 CLI commands: `/help`, `/reset`, `/accounts`, `/db`, `/exit`.
 
+## Web demo (self-contained)
+
+A single-file browser demo lives at [`web/index.html`](web/index.html). It has
+**no dependencies and needs no server** — just open it:
+
+```bash
+open finance_agent/web/index.html      # macOS  (Linux: xdg-open, Windows: start)
+```
+
+The finance math and a small double-entry ledger are ported to JavaScript, so
+the **Capital Gains**, **Planning**, and **Bookkeeping** panels work fully
+offline (the ledger persists in your browser's localStorage). The **AI
+Assistant** panel optionally connects to the Claude API directly from the
+browser if you paste an API key, running the same in-browser tools.
+
+The layout also reserves space for two **planned** modules — **SMSF**
+(self-managed super fund) and **Insurance** — scaffolded as "coming soon" so the
+front end can be built upon without re-architecting. Later, the assistant panel
+can point at the Python `finance_agent` backend instead of the in-browser tools.
+
+> The JavaScript calculations are verified against the Python tools (same test
+> values as `selftest.py`).
+
 ## Verify without an API key
 
 The deterministic tools (ledger + financial math) have an offline self-test:
