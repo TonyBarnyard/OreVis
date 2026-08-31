@@ -10,7 +10,6 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/World.h"
-#include "EngineUtils.h"
 #include "GameFramework/GameModeBase.h"
 #include "GameFramework/PlayerController.h"
 #include "InputActionValue.h"
@@ -81,33 +80,32 @@ void AOreVisARPawn::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	// Once AR tracking goes live, bump the startup tacho through the
-	// scatter → ready transition and let the game mode drop the initial
-	// objects. Done once per session.
-	if (!bInitialSpawnComplete)
+	// Wait for AR tracking to go live, then bump the startup tacho through
+	// the scatter → ready transition and let the game mode drop the initial
+	// objects. Runs once per session; tick self-disables afterwards so we
+	// don't fight AR pin updates on every placeable each frame.
+	if (bInitialSpawnComplete)
 	{
-		const EARSessionStatus Status = UARBlueprintLibrary::GetARSessionStatus().Status;
-		if (Status == EARSessionStatus::Running)
-		{
-			UOreVisStartupSubsystem* Startup = UOreVisStartupSubsystem::Get(this);
-			if (Startup) { Startup->SetStage(EOreVisStartupStage::ScatteringObjects); }
-
-			if (AOreVisARGameMode* GM = GetWorld()->GetAuthGameMode<AOreVisARGameMode>())
-			{
-				GM->ScatterInitialObjects(this);
-			}
-
-			if (Startup) { Startup->SetStage(EOreVisStartupStage::Ready); }
-			bInitialSpawnComplete = true;
-		}
+		return;
 	}
 
-	// Safety net: if any placeable drifts beyond the allowed radius (e.g.
-	// the user walks away from it), pull it back to the boundary.
-	for (TActorIterator<AARPlaceableActor> It(GetWorld()); It; ++It)
+	const EARSessionStatus Status = UARBlueprintLibrary::GetARSessionStatus().Status;
+	if (Status != EARSessionStatus::Running)
 	{
-		ClampToPlacementRadius(*It);
+		return;
 	}
+
+	UOreVisStartupSubsystem* Startup = UOreVisStartupSubsystem::Get(this);
+	if (Startup) { Startup->SetStage(EOreVisStartupStage::ScatteringObjects); }
+
+	if (AOreVisARGameMode* GM = GetWorld()->GetAuthGameMode<AOreVisARGameMode>())
+	{
+		GM->ScatterInitialObjects(this);
+	}
+
+	if (Startup) { Startup->SetStage(EOreVisStartupStage::Ready); }
+	bInitialSpawnComplete = true;
+	SetActorTickEnabled(false);
 }
 
 AARPlaceableActor* AOreVisARPawn::SpawnPlaceableInFront(float DistanceCm,
