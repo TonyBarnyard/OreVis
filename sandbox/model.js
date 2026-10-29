@@ -1,4 +1,4 @@
-// OreVis design model: turns a robot design (config) into mass, cost, speed,
+// Robot design model: turns a robot design (config) into mass, cost, speed,
 // runtime, strength checks and a list of abilities. Pure functions, no DOM,
 // so the browser sandbox and the Python test bench (via node) share one model.
 // These are first-order hand calculations to compare designs, not a substitute
@@ -212,5 +212,5 @@
 
   var api = { STAGES: STAGES, evaluate: evaluate, geometry: geometry, clone: clone };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
-  root.OrevisModel = api;
+  root.RobotModel = api;
 })(typeof window !== "undefined" ? window : globalThis);

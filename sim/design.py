@@ -1,4 +1,4 @@
-"""Load OreVis designs and the shared parts library.
+"""Load robot designs and the shared parts library.
 
 The parts library lives in sandbox/parts.js so the browser sandbox and this
 physics bench always use the same numbers. Designs are the JSON the sandbox
@@ -21,7 +21,7 @@ DEFAULT_DESIGN = {
 
 def load_parts():
     text = PARTS_JS.read_text()
-    start = text.index("window.OREVIS_PARTS =") + len("window.OREVIS_PARTS =")
+    start = text.index("window.ROBOT_PARTS =") + len("window.ROBOT_PARTS =")
     return json.loads(text[start:].strip().rstrip(";"))
 
 

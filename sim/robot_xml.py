@@ -1,4 +1,4 @@
-"""Build a MuJoCo (MJCF) model of an OreVis design.
+"""Build a MuJoCo (MJCF) model of a robot design.
 
 Frame: x forward, y left, z up, metres. The body is a rounded-square box with
 four wheels, track sides (approximated by three driven wheels per side) or an
@@ -155,7 +155,7 @@ def build(d, parts, scenario):
   {arm_xml}
 </body>'''
 
-    xml = f'''<mujoco model="orevis_{d.get('name', 'design').replace(' ', '_')}">
+    xml = f'''<mujoco model="robot_{d.get('name', 'design').replace(' ', '_')}">
   <compiler angle="radian" autolimits="true"/>
   <option timestep="0.001" gravity="{gravity}" integrator="implicitfast" cone="elliptic"/>
   <!-- Robot parts (contype 2) touch the world (contype 1) but not each other. -->

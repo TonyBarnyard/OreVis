@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>OreVis Robot Sandbox</title>
+<title>Modular Robot Sandbox</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
@@ -121,7 +121,7 @@ table.cmp th, table.cmp td { text-align: left; padding: 3px 5px; border-bottom: 
 
 <div class="wrap">
   <header class="top">
-    <h1>OreVis <span>Robot Sandbox</span></h1>
+    <h1>Modular <span>Robot Sandbox</span></h1>
     <p class="sub">Build it, drive it and break it here before you buy parts. Evolve the robot from wheels to legs, a hand and a voice.</p>
   </header>
 
@@ -263,7 +263,7 @@ table.cmp th, table.cmp td { text-align: left; padding: 3px 5px; border-bottom: 
 <script>
 (function () {
 "use strict";
-var P = window.OREVIS_PARTS, MODEL = window.OrevisModel, MM = 0.001;
+var P = window.ROBOT_PARTS, MODEL = window.RobotModel, MM = 0.001;
 var $ = function (id) { return document.getElementById(id); };
 function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } }
 
@@ -961,7 +961,7 @@ function standUp() { robot.squatTarget = 0; reachPlan = null; }
 function refuse(ab) { var r = result.abilities[ab].reason; say("I can't do that yet. " + r, false); face.mood = "sad"; setTimeout(function () { face.mood = "normal"; }, 1500); }
 
 /* ---------------- Program runner ---------------- */
-$("program").value = "say Hello! I am OreVis.\nface happy\nforward 200\nturn 90\nlook 20\nforward 150\nlook 0\nturn -90\ndance\nface normal";
+$("program").value = "say Hello! I am your robot.\nface happy\nforward 200\nturn 90\nlook 20\nforward 150\nlook 0\nturn -90\ndance\nface normal";
 function parseProgram(text) { return text.split(/\n/).map(function (l) { return l.trim(); }).filter(function (l) { return l && l[0] !== "#"; }); }
 function startProgram() {
   program = { lines: parseProgram($("program").value), i: 0, cur: null };
@@ -1058,7 +1058,7 @@ function hear(text) {
   }
   if (/(how heavy|weigh|mass)/.test(t)) return say("I weigh " + fmtMass(result.mass_g) + ".", true);
   if (/(battery|how long)/.test(t)) return say("My battery lasts about " + Math.round(result.runtime_min) + " minutes.", true);
-  if (/(name|who are you)/.test(t)) return say("I'm OreVis, stage " + state.stage + ", the " + MODEL.STAGES[state.stage - 1].name + ".", true);
+  if (/(name|who are you)/.test(t)) return say("I'm your robot. Stage " + state.stage + ", the " + MODEL.STAGES[state.stage - 1].name + ".", true);
   if (/(evolve|grow|upgrade)/.test(t)) { if (state.stage < 5) { setStage(state.stage + 1); } else say("I'm fully evolved. Next I need you to build me for real!", true); return; }
   if (/\b(hello|hi|hey|g'day)\b/.test(t)) { face.mood = "happy"; setTimeout(function () { face.mood = "normal"; }, 1500); return say("Hello! What should we build today?", true); }
   if (/\b(happy|sad|sleepy|surprised)\b/.test(t)) { face.mood = t.match(/\b(happy|sad|sleepy|surprised)\b/)[1]; return say("Feeling " + face.mood + ".", true); }
@@ -1077,7 +1077,7 @@ var missions = [
   { id: "talk", name: "Ask: what can you do?", need: "voice", done: false, test: function () { return false; } },
   { id: "tidy", name: "Say “tidy up” and let it work alone", need: "camera brain and arm", done: false, test: function () { return blocks.every(function (b) { return !b.held && binAt(b.mesh.position.x, b.mesh.position.z) === b.color; }); } }
 ];
-var savedMissions = store("orevis.missions") || {};
+var savedMissions = store("robot.missions") || {};
 missions.forEach(function (m) { m.done = !!savedMissions[m.id]; });
 function renderMissions() {
   var ul = $("missions"); ul.innerHTML = "";
@@ -1089,7 +1089,7 @@ function renderMissions() {
 }
 function markMission(id) {
   var m = missions.find(function (x) { return x.id === id; }); if (!m || m.done) return;
-  m.done = true; savedMissions[id] = true; store("orevis.missions", savedMissions); renderMissions();
+  m.done = true; savedMissions[id] = true; store("robot.missions", savedMissions); renderMissions();
   logLine("bot", "★ Mission complete: " + m.name);
 }
 var missionTick = 0;
@@ -1232,7 +1232,7 @@ $("b-run").addEventListener("click", startProgram);
 $("b-stop").addEventListener("click", function () { program = null; autopilot = null; armTarget = null; standUp(); logLine("bot", "Stopped."); });
 
 /* ---------------- Saved designs ---------------- */
-var saved = store("orevis.designs") || [];
+var saved = store("robot.designs") || [];
 function renderSaved() {
   var t = $("cmp");
   var rows = saved.map(function (d) { var r = MODEL.evaluate(d.cfg, P); return { d: d, r: r }; });
@@ -1247,11 +1247,11 @@ function renderSaved() {
 $("cmp").addEventListener("click", function (e) {
   var l = e.target.dataset.load, d = e.target.dataset.del;
   if (l !== undefined) { state.cfg = MODEL.clone(saved[+l].cfg); state.stage = saved[+l].stage || state.stage; cfgToForm(); refresh(true); }
-  if (d !== undefined) { saved.splice(+d, 1); store("orevis.designs", saved); renderSaved(); }
+  if (d !== undefined) { saved.splice(+d, 1); store("robot.designs", saved); renderSaved(); }
 });
 $("b-save").addEventListener("click", function () {
   var name = $("saveName").value.trim() || ("Design " + (saved.length + 1));
-  saved.push({ name: name, stage: state.stage, cfg: MODEL.clone(state.cfg) }); store("orevis.designs", saved); renderSaved(); $("saveName").value = "";
+  saved.push({ name: name, stage: state.stage, cfg: MODEL.clone(state.cfg) }); store("robot.designs", saved); renderSaved(); $("saveName").value = "";
 });
 $("b-copy").addEventListener("click", function () {
   var ta = $("json");
@@ -1267,9 +1267,9 @@ applyTheme();
 new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
 cfgToForm(); refresh(true); renderSaved(); resize();
-logLine("bot", "Hi! I'm OreVis, stage 1. Drive me with W A S D, then evolve me with the stage buttons.");
+logLine("bot", "Hi! I'm your robot, stage 1. Drive me with W A S D, then evolve me with the stage buttons.");
 requestAnimationFrame(frame);
 // Read-only hook for automated tests (sandbox/test_sandbox.js).
-window.__orevis = { robot: robot, blocks: function () { return blocks; }, task: function () { return autopilot && (autopilot.type + ":" + (autopilot.phase || "")); }, arm: armPose };
+window.__robot = { robot: robot, blocks: function () { return blocks; }, task: function () { return autopilot && (autopilot.type + ":" + (autopilot.phase || "")); }, arm: armPose };
 })();
 </script>

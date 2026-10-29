@@ -1,4 +1,4 @@
-"""OreVis physics test bench (MuJoCo).
+"""Robot physics test bench (MuJoCo).
 
 Runs the same design the browser sandbox exports through rigid-body physics:
 
@@ -232,7 +232,7 @@ def model_prediction(d):
         return None
     root = Path(__file__).resolve().parent.parent / "sandbox"
     js = ("global.window=global;require(process.argv[1]+'/parts.js');const M=require(process.argv[1]+'/model.js');"
-          "const r=M.evaluate(JSON.parse(process.argv[2]),window.OREVIS_PARTS);"
+          "const r=M.evaluate(JSON.parse(process.argv[2]),window.ROBOT_PARTS);"
           "console.log(JSON.stringify({speed:r.speed_mps,step:r.step_mm,checks:r.checks.map(c=>[c.id,c.status])}))")
     try:
         out = subprocess.run([node, "-e", js, str(root), json.dumps(d)], capture_output=True, text=True, timeout=20)

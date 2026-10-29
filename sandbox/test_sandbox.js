@@ -15,14 +15,14 @@ const server = http.createServer((req, res) => {
   if (threeLocal) await page.route('**/three.min.js', r => r.fulfill({ path: path.resolve(threeLocal), contentType: 'application/javascript' }));
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(`http://localhost:${port}/index.html`);
-  await page.waitForFunction(() => window.__orevis);
+  await page.waitForFunction(() => window.__robot);
   const shots = process.env.SHOTS;
   let ok = true;
   const check = (name, cond, extra) => { console.log((cond ? 'PASS ' : 'FAIL ') + name + (extra ? '  ' + extra : '')); ok = ok && cond; };
 
   // Stage 1 drives
   await page.keyboard.down('KeyW'); await page.waitForTimeout(1500); await page.keyboard.up('KeyW');
-  const moved = await page.evaluate(() => Math.hypot(__orevis.robot.x + 0.5, __orevis.robot.z + 0.3));
+  const moved = await page.evaluate(() => Math.hypot(__robot.robot.x + 0.5, __robot.robot.z + 0.3));
   check('stage 1 drives forward', moved > 0.1, (moved * 1000).toFixed(0) + ' mm');
   if (shots) await page.screenshot({ path: shots + '/stage1.png' });
 
@@ -38,7 +38,7 @@ const server = http.createServer((req, res) => {
   const t0 = Date.now(); let done = false, lastTask = '';
   while (Date.now() - t0 < 150000) {
     await page.waitForTimeout(2000);
-    const s = await page.evaluate(() => ({ task: __orevis.task(), held: !!__orevis.robot.held, log: document.getElementById('log').innerText.split('\n').slice(-1)[0] }));
+    const s = await page.evaluate(() => ({ task: __robot.task(), held: !!__robot.robot.held, log: document.getElementById('log').innerText.split('\n').slice(-1)[0] }));
     if (s.task !== lastTask) { console.log('   ', ((Date.now() - t0) / 1000).toFixed(0) + 's', s.task, s.held ? '(holding)' : '', '|', s.log); lastTask = s.task; }
     if (shots && !done && s.held) { await page.screenshot({ path: shots + '/carry.png' }); }
     if (/All tidy|can't reach/.test(s.log)) { done = /All tidy/.test(s.log); break; }

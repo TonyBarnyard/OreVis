@@ -1,4 +1,4 @@
-# OreVis robot
+# Modular robot
 
 A small rounded-square robot that starts on wheels and evolves: tracks, then legs (Open Duck Mini), then an arm with a humanoid hand, then a voice. Every stage is built and tested in a digital twin before any parts are bought.
 
@@ -9,6 +9,7 @@ A small rounded-square robot that starts on wheels and evolves: tracks, then leg
 | `plan/` | The original project plan and `robot_project_plan_v2.xlsx` with the review, the evolution roadmap, later-stage parts and test results. |
 | `docs/PLAN_REVIEW.md` | What changed from the original plan, and why. |
 | `sim/OPEN_DUCK.md` | How to get the walking version going with the open-source Open Duck Mini. |
+| `third_party/pollen/` | Free, open-source files from **Pollen Robotics**: the Amazing Hand's servo code (Python and Arduino) and its MuJoCo model. `third_party/fetch_pollen.sh` downloads the rest: the hand's print files (STL/STEP) and the Reachy Mini SDK with its talking app. |
 
 ## Try the sandbox
 
@@ -45,6 +46,18 @@ Latest results (`sim/results.json`):
 | 4 Helper (legs + arm) | Holds a block arm-out at 64% of shoulder stall, tilts 0.5° |
 | Helper + Amazing Hand | **Tips over** (44°), shoulder at stall |
 | Mini duck on SG90 servos | Knees hit **100%** of stall in a squat |
+
+## Pollen Robotics' Amazing Hand
+
+```
+python sim/amazing_hand.py                # Pollen's own hand model through their named poses
+python sim/amazing_hand.py --view close   # watch it close in the MuJoCo viewer
+third_party/fetch_pollen.sh               # print files: third_party/pollen/src/AmazingHand/cad/stl
+```
+
+The hand software is Apache 2.0 and the mechanical design is CC BY 4.0 (credit "AmazingHand by Pollen Robotics"). See `third_party/pollen/NOTICE.md`.
+
+What the model shows: open, the thumb tip is up to 206 mm from the fingertips. Fully closed, it is still 46 mm away, so the hand wraps objects rather than pinching small ones tip-to-tip. Use 50 mm objects for first tests.
 
 ## Tests
 

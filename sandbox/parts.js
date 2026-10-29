@@ -1,9 +1,9 @@
-// OreVis parts library: the single source of truth for the browser sandbox
+// Robot parts library: the single source of truth for the browser sandbox
 // (sandbox/index.html) and the MuJoCo test bench (sim/parts.py reads this file).
-// Everything after "OREVIS_PARTS =" must stay valid JSON.
+// Everything after "ROBOT_PARTS =" must stay valid JSON.
 // Masses, torques and prices are planning estimates. Check the seller's datasheet before buying.
 // Torque in N·m, mass in grams, power in watts, prices in AUD (low, high).
-window.OREVIS_PARTS = {
+window.ROBOT_PARTS = {
   "brains": {
     "pico_w":     {"label": "Raspberry Pi Pico W", "mass": 4,  "watts": 0.4, "aud": [9.5, 18],  "video": false, "bus_servos": false, "rl_policy": false, "speech": "beeps", "note": "Great for motors, face and sensors. Cannot stream video or run a walking policy."},
     "pi_zero_2w": {"label": "Raspberry Pi Zero 2 W", "mass": 11, "watts": 1.5, "aud": [25, 35],   "video": true,  "bus_servos": true,  "rl_policy": true,  "speech": "cloud", "note": "The Open Duck Mini runs its walking policy on this board. Can stream a Pi camera."},

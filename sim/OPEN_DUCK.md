@@ -11,7 +11,7 @@ The sandbox and `bench.py` can tell you if a pair of legs is strong enough to st
 
 ## Recommended route
 
-1. **Build the duck's legs as designed.** Don't redesign the legs. The published policy was trained for that exact mass, leg geometry and servo behaviour, so a stock duck walks on day one. OreVis becomes the "head and body": the orange shell, the face screen and the spiral camera mount sit on top. Keep the extra mass under about 150 g and keep it centred, or the policy will need retraining.
+1. **Build the duck's legs as designed.** Don't redesign the legs. The published policy was trained for that exact mass, leg geometry and servo behaviour, so a stock duck walks on day one. The round robot becomes the "head and body": the orange shell, the face screen and the spiral camera mount sit on top. Keep the extra mass under about 150 g and keep it centred, or the policy will need retraining.
 2. **Run the stock policy in simulation first.** Install `uv` (`curl -LsSf https://astral.sh/uv/install.sh | sh`), clone Open_Duck_Playground, then run its MuJoCo inference script with a trained ONNX policy:
    ```
    uv run playground/open_duck_mini_v2/mujoco_infer.py -o <path_to_.onnx>
@@ -21,14 +21,14 @@ The sandbox and `bench.py` can tell you if a pair of legs is strong enough to st
    cd scripts/
    python v2_rl_walk_mujoco.py --onnx_model_path <path_to>/BEST_WALK_ONNX_2.onnx
    ```
-4. **Retrain only when the body changes a lot.** For example, when you add the arm and hand at stage 4. Copy `playground/open_duck_mini_v2` to `playground/orevis`, swap in your own MJCF (start from `python sim/bench.py sim/designs/4_helper.json --xml`, which writes `sim/out/helper.xml`, or better, edit the duck's own model), then:
+4. **Retrain only when the body changes a lot.** For example, when you add the arm and hand at stage 4. Copy `playground/open_duck_mini_v2` to `playground/my_robot`, swap in your own MJCF (start from `python sim/bench.py sim/designs/4_helper.json --xml`, which writes `sim/out/helper.xml`, or better, edit the duck's own model), then:
    ```
-   uv run playground/orevis/runner.py --task flat_terrain_backlash --num_timesteps 300000000
+   uv run playground/my_robot/runner.py --task flat_terrain_backlash --num_timesteps 300000000
    uv run tensorboard --logdir=<yourlogdir>
    ```
    Training runs that long need a computer with a decent NVIDIA GPU, or a rented cloud GPU for a few hours. Don't try it on the Pi.
 
-## What the OreVis bench already tells you before you train
+## What the physics bench already tells you before you train
 
 - STS3215 knees hold the 1.36 kg Helper in a crouch at about 7% of stall, and peak at about 36% during a full squat. There is room left for walking.
 - SG90 hobby servos reach 100% of stall in the same squat on a 120 mm mini duck. They also can't report their angle, which the policy needs. Use bus servos.

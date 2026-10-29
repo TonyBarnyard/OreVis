@@ -79,10 +79,12 @@ REVIEW = [
     ("Adapt", "Choose N20 motors with hall encoders", "Encoders count wheel turns. The robot can then drive exact distances, which the digital twin and autonomous tasks need. They cost a few dollars more per motor.", "Change E04 to encoder N20s (6 extra Pico pins)"),
     ("Adapt", "Plan the shell around two brains from day one", "Pico W is right for stage 1 (motors, face, sensor). Video, walking, speech and the hand all need a Linux board. A Pi Zero 2 W is 65 x 30 mm.", "Leave a 70 x 35 mm bay and a 5 V 3 A supply rail in the stage 1 shell"),
     ("Adapt", "Power: move to a 2S (7.4 V) pack with a BMS before stage 3", "Bus servos (STS3215) need about 7.4 V. 4x AA NiMH at 4.8 V is fine for stage 1 only. Add a fuse, a switch and a 5 V buck converter for the Pi.", "New part U07 and U08; supervised charging in a LiPo bag"),
-    ("Adapt", "Walking: adopt the Open Duck Mini legs and policy, don't design new legs", "Open Duck Mini is open source (Apache-2.0), about 42 cm tall, uses a Pi Zero 2 W and already has a trained walking policy. Ten STS3215 servos will not fit in a 120 mm body: they need about a 170 mm body.", "Stage 3 = build the duck's legs and put the OreVis shell, face and camera on top. Keep added mass under about 150 g. See sim/OPEN_DUCK.md"),
+    ("Adapt", "Walking: adopt the Open Duck Mini legs and policy, don't design new legs", "Open Duck Mini is open source (Apache-2.0), about 42 cm tall, uses a Pi Zero 2 W and already has a trained walking policy. Ten STS3215 servos will not fit in a 120 mm body: they need about a 170 mm body.", "Stage 3 = build the duck's legs and put the round robot shell, face and camera on top. Keep added mass under about 150 g. See sim/OPEN_DUCK.md"),
     ("Adapt", "Use one servo family for legs, arm and hand", "Feetech serial-bus servos (STS3215, SCS0009) share one 3-wire bus and one driver board, and report their angle. Open Duck, the LeRobot SO-101 arm and Pollen's Amazing Hand all use them.", "Standardise on Feetech bus servos for stages 3 to 5"),
     ("Adapt", "Hand: start with a light 3-finger hand, not the full humanoid hand", "Pollen's Amazing Hand is about 400 g. The physics bench shows the 1.36 kg walker tips 44 degrees holding it out. A 45 g 3-finger tendon hand holds a 20 g block at 64% of shoulder stall with no tipping.", "Stage 4 = 3-finger hand. Try the Amazing Hand later on a bench-mounted arm"),
     ("Adapt", "A walking robot must squat to pick things off the floor", "Sandbox: with a 17 cm arm mounted 26 cm up, the Helper only reaches the floor by squatting about 63 degrees at the knee. The bench shows STS3215 knees peak at 36% of stall in that squat, which is fine.", "Add a squat-and-reach behaviour (sandbox already does it)"),
+    ("Adapt", "Use Pollen Robotics' open-source Amazing Hand files", "Pollen publish the hand's print files (CC BY 4.0), servo code and a MuJoCo model (Apache 2.0). A copy is in third_party/pollen; python sim/amazing_hand.py runs their model through their named poses. Closed, the fingertips stop about 46 mm from the thumb, so tip-to-tip it can't pinch the 30 mm test blocks.", "Use their files as-is for the bench-mounted hand; test with 50 mm objects first"),
+    ("Adapt", "Stage 5 voice: start from Pollen's Reachy Mini conversation app", "Reachy Mini's SDK and conversation app are open source (Apache 2.0) and already connect a microphone, a speaker and a language model to a small robot.", "third_party/fetch_pollen.sh downloads it; adapt its voice loop for P30-P31"),
     ("Adapt", "Software: write behaviours once, run them in the twin and on the robot", "Give motors, servos and sensors the same small interface in the sandbox, MuJoCo and the robot. Tested behaviour code can then move to hardware unchanged.", "New software row 10: hal.py"),
     ("Fix", "P04 does not need to wait for parts (P03)", "The computer, Thonny and the sandbox can all be set up while parts ship.", "P04 dependency changed to None"),
     ("Fix", "P18 live video now has a home", "Stage 2 adds the Pi Zero 2 W, which streams the camera. The Pico keeps doing motors and the face.", "P18 linked to stage 2 tasks"),
@@ -93,7 +95,7 @@ ROADMAP = [
      "Pico W", "4x N20 wheels", "Drive, face, stop for obstacles", "Sandbox missions 1-2; bench: 15 degree ramp", "385 g", "$176-377"),
     ("2", "Explorer", "Track panels on 44 mm sprockets, Pi Zero 2 W + camera for live video. Encoders for exact moves.",
      "Pico W + Pi Zero 2 W", "Tracks", "Live video, kerbs, mapping the room", "Bench: step >= 20 mm (needs more clearance)", "432 g", "$256-524"),
-    ("3", "Duckling", "Grows legs: Open Duck Mini v2 legs (10x STS3215), BNO055 IMU, 2S battery. OreVis shell becomes the head and body.",
+    ("3", "Duckling", "Grows legs: Open Duck Mini v2 legs (10x STS3215), BNO055 IMU, 2S battery. The round robot shell becomes the head and body.",
      "Pi Zero 2 W", "Two legs", "Walks with the Open Duck policy", "Bench: stand + squat; Open Duck MuJoCo inference walks", "about 1.1 kg", "$503-875"),
     ("4", "Helper", "Adds a 4-servo STS3215 arm and a 3-finger tendon hand on the right shoulder.",
      "Pi Zero 2 W", "Two legs", "Squat, pick a block, carry it to a bin", "Sandbox: Tidy-up mission; bench: arm hold, no tipping", "about 1.4 kg", "$621-1075"),
@@ -110,7 +112,7 @@ TASKS = [
     ("P23", "Stage 3: build the duck legs", "Print and assemble the Open Duck Mini v2 legs. Set each STS3215 servo ID and test it alone with the bus board before assembly.", "P22", "15-25 hours"),
     ("P24", "Stage 3: power and IMU", "2S pack with BMS, fuse, switch and 5 V 3 A buck for the Pi. Fit the BNO055 IMU near the centre of the body and test it.", "P23", "3-5 hours"),
     ("P25", "Stage 3: first steps", "Follow the Open_Duck_Mini_Runtime setup, find joint offsets, then run the walk policy on a soft floor with a hand ready to catch.", "P24", "4-8 hours"),
-    ("P26", "Stage 3: OreVis head on the duck", "Mount the shell, face display and camera on top. Keep added mass under about 150 g and centred; re-check walking.", "P25", "4-8 hours"),
+    ("P26", "Stage 3: robot head on the duck", "Mount the shell, face display and camera on top. Keep added mass under about 150 g and centred; re-check walking.", "P25", "4-8 hours"),
     ("P27", "Stage 4: arm and 3-finger hand", "Print the 4-servo arm and tendon hand. Run sim/bench.py with your real masses before printing. Test the arm clamped to the bench first.", "P26", "10-15 hours"),
     ("P28", "Stage 4: squat-and-reach", "Program the squat, reach, grip and lift sequence (the sandbox shows the steps). Test it standing still before trying it while walking.", "P27", "6-10 hours"),
     ("P29", "Stage 4: retrain walking with the arm", "Copy open_duck_mini_v2 in the Playground, add the arm and hand mass, train, and test in MuJoCo before the robot.", "P27", "1-2 days (GPU)"),
@@ -132,7 +134,7 @@ PARTS = [
     ("U10", "3-finger tendon hand (2 micro servos + printed parts)", "About 45 g. Fishing line tendons, elastic return.", 15, 30, "Stage 4", "https://www.printables.com/search/models?q=robot%20hand%20tendon"),
     ("U11", "Raspberry Pi 5 (4 GB) + cooler", "Stage 5 brain for speech and vision.", 95, 125, "Stage 5", "https://core-electronics.com.au/raspberry-pi-5-model-b-4gb.html"),
     ("U12", "I2S amp (MAX98357), speaker, USB microphone", "Voice in and out.", 20, 40, "Stage 5", "https://core-electronics.com.au/search.php?search_query=MAX98357"),
-    ("O04", "Pollen Amazing Hand kit (optional)", "8 servos, about 400 g. Too heavy for the walker; use on a bench arm.", 300, 380, "Optional", "https://huggingface.co/blog/pollen-robotics/amazing-hand"),
+    ("O04", "Pollen Amazing Hand (optional): 8x Feetech SCS0009 + printed parts", "Free print files and code from Pollen (third_party/pollen). About 400 g: too heavy for the walker, use on a bench arm.", 300, 380, "Optional", "https://github.com/pollen-robotics/AmazingHand"),
 ]
 
 SOFTWARE = [
@@ -140,7 +142,7 @@ SOFTWARE = [
     (11, "link.py (Pi <-> Pico)", "Stage 2 two-brain link", "JSON lines over UART: the Pi sends drive and face commands, the Pico replies with sensor readings. The Pico still stops on its own if messages stop.", "Unplugging the Pi stops the robot within 0.5 s.", "https://docs.micropython.org/en/latest/library/machine.UART.html", "Not started"),
     (12, "walk (Open Duck runtime)", "Walking", "Use Open_Duck_Mini_Runtime unchanged first. Wrap it so hal.py can ask for 'walk at speed v, turn w'.", "Robot walks forward, turns and stops on command.", "https://github.com/apirrone/Open_Duck_Mini_Runtime", "Not started"),
     (13, "arm.py", "Squat, reach, grip, lift", "Two-link IK as in the sandbox; plan squat depth from target height. Check servo load readings and stop if over 80%.", "Picks a 30 mm block from the floor 9 times out of 10.", "sandbox/index.html (planReach, solveArm)", "Not started"),
-    (14, "voice.py", "Listen and talk", "Wake word, then speech-to-text, then the same command parser as the sandbox. Say 'stop' always wins.", "Understands 'pick up the red block' and 'stop'.", "https://github.com/rhasspy/piper", "Not started"),
+    (14, "voice.py", "Listen and talk", "Start from Pollen's Reachy Mini conversation app (third_party/fetch_pollen.sh). Speech goes to the same command parser as the sandbox. 'Stop' always wins.", "Understands 'pick up the red block' and 'stop'.", "https://github.com/pollen-robotics/reachy_mini", "Not started"),
     (15, "tasks.py", "Do jobs alone", "Tidy-up: find blocks by colour with the camera, then pick and place each one. Develop it in the sandbox first.", "Finishes the sandbox Tidy-up mission, then the real one.", "sandbox mission 8", "Not started"),
 ]
 
