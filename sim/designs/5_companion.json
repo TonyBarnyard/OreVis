@@ -1,0 +1,22 @@
+{
+  "name": "Companion",
+  "body_mm": 180,
+  "height_mm": 100,
+  "locomotion": "legs",
+  "drive_motor": "n20_100rpm",
+  "wheel_mm": 34,
+  "leg_servo": "sts3215",
+  "leg_mm": 180,
+  "arm": true,
+  "arm_servo": "sts3215",
+  "arm_mm": [
+    90,
+    80
+  ],
+  "hand": "micro_hand",
+  "brain": "pi5_4gb",
+  "battery": "li18650_2s",
+  "voice": true,
+  "mast_mm": 40,
+  "payload_g": 20
+}
