@@ -33,7 +33,7 @@ def load_design(path=None):
 
 
 def hand_length_mm(hand):
-    return {"amazing_hand": 110, "micro_hand": 50}.get(hand, 35)
+    return {"amazing_hand": 185, "micro_hand": 50}.get(hand, 35)  # Pollen model: fingertips about 0.19 m from the wrist
 
 
 def geometry(d):

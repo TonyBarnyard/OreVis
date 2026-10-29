@@ -44,7 +44,7 @@
 
   function grade(ratio) { return ratio >= 1.5 ? "pass" : ratio >= 1.0 ? "warn" : "fail"; }
 
-  function handLength(hand) { return hand === "amazing_hand" ? 110 : hand === "micro_hand" ? 50 : 35; }
+  function handLength(hand) { return hand === "amazing_hand" ? 185 : hand === "micro_hand" ? 50 : 35; }
 
   // Geometry the 3D view and physics bench also use, in millimetres.
   function geometry(cfg) {

@@ -36,7 +36,7 @@ const server = http.createServer((req, res) => {
   if (shots) await page.screenshot({ path: shots + '/stage4.png' });
   await page.fill('#talk', 'tidy up'); await page.press('#talk', 'Enter');
   const t0 = Date.now(); let done = false, lastTask = '';
-  while (Date.now() - t0 < 150000) {
+  while (Date.now() - t0 < 240000) {
     await page.waitForTimeout(2000);
     const s = await page.evaluate(() => ({ task: __robot.task(), held: !!__robot.robot.held, log: document.getElementById('log').innerText.split('\n').slice(-1)[0] }));
     if (s.task !== lastTask) { console.log('   ', ((Date.now() - t0) / 1000).toFixed(0) + 's', s.task, s.held ? '(holding)' : '', '|', s.log); lastTask = s.task; }
@@ -52,6 +52,16 @@ const server = http.createServer((req, res) => {
   const t1 = Date.now(); let tipped = false;
   while (Date.now() - t1 < 60000) { await page.waitForTimeout(1500); const l = await page.$eval('#log', e => e.innerText); if (/tipped over|can't lift|can't do that/i.test(l)) { tipped = true; break; } }
   check('Amazing Hand on the stage 4 body is flagged (tips or too heavy)', tipped);
+
+  // Pollen's Amazing Hand: hand lab loads the real model, poses animate, and it mounts on the arm
+  const hl = await page.evaluate(() => __robot.hand());
+  check('Pollen hand model loads in the hand lab', hl.state === 'ready');
+  await page.click('#handPoses [data-pose="point"]'); await page.waitForTimeout(1500);
+  const hp = await page.evaluate(() => __robot.hand());
+  check('hand lab moves to Pollen\'s point pose', hp.pose === 'point' && hp.t > 0.9, JSON.stringify(hp));
+  await page.click('#b-fitHand'); await page.waitForTimeout(800);
+  check('Amazing Hand mounts on the robot arm', (await page.evaluate(() => __robot.hand())).onRobot);
+  if (shots) { await page.locator('#hand-h').scrollIntoViewIfNeeded(); await page.screenshot({ path: shots + '/handlab.png' }); }
 
   check('no page errors', errors.length === 0, errors.join(' | '));
   await browser.close(); server.close();

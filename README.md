@@ -44,7 +44,7 @@ Latest results (`sim/results.json`):
 | 2 Explorer (tracks) | 0.23 m/s, 25° ramps, steps 15 mm |
 | 3 Duckling (legs) | Stands and squats, knees peak at 32% of stall |
 | 4 Helper (legs + arm) | Holds a block arm-out at 64% of shoulder stall, tilts 0.5° |
-| Helper + Amazing Hand | **Tips over** (44°), shoulder at stall |
+| Helper + Amazing Hand | **Tips over** (37°), shoulder at stall |
 | Mini duck on SG90 servos | Knees hit **100%** of stall in a squat |
 
 ## Pollen Robotics' Amazing Hand
@@ -58,6 +58,8 @@ third_party/fetch_pollen.sh               # print files: third_party/pollen/src/
 The hand software is Apache 2.0 and the mechanical design is CC BY 4.0 (credit "AmazingHand by Pollen Robotics"). See `third_party/pollen/NOTICE.md`.
 
 What the model shows: open, the thumb tip is up to 206 mm from the fingertips. Fully closed, it is still 46 mm away, so the hand wraps objects rather than pinching small ones tip-to-tip. Use 50 mm objects for first tests.
+
+In the sandbox, the **Hand lab** panel shows Pollen's real hand: their 3D parts, moved by their own finger linkages (recorded from their model by `sim/export_pollen_hand.py`), with the servo angles their demo code sends. Try the pose buttons, **Play Pollen's demo**, or type "make a fist" or `hand point` in a program. **Fit it to the robot** puts it on the arm, and the checks show it is too heavy for the walker.
 
 ## Tests
 

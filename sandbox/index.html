@@ -91,6 +91,11 @@ button { font: inherit; cursor: pointer; }
 .hud { position: absolute; left: 10px; top: 10px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
 .hud span { font-family: var(--mono); font-size: 11.5px; background: color-mix(in srgb, var(--panel) 85%, transparent); border-radius: 5px; padding: 2px 7px; width: fit-content; }
 .pip-label { position: absolute; right: 10px; bottom: calc(26% + 14px); font-family: var(--mono); font-size: 11px; background: color-mix(in srgb, var(--panel) 85%, transparent); border-radius: 5px; padding: 2px 6px; pointer-events: none; }
+.handbox { position: relative; background: var(--room); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; aspect-ratio: 4 / 3; max-width: 100%; }
+.handbox canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.handmsg { position: absolute; inset: auto 8px 8px 8px; font-size: 12px; color: var(--muted); }
+.posebtns .btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.servos { font-family: var(--mono); font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .pip-frame { position: absolute; border: 2px solid var(--ink); border-radius: 4px; pointer-events: none; }
 .bubble { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); max-width: 70%; background: var(--panel); border: 2px solid var(--accent); border-radius: 12px; padding: 6px 12px; font-weight: 700; pointer-events: none; }
 .drivepad { display: grid; grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(2, 40px); gap: 4px; }
@@ -231,13 +236,23 @@ table.cmp th, table.cmp td { text-align: left; padding: 3px 5px; border-bottom: 
         </form>
         <div class="toggle"><input type="checkbox" id="speak" checked><label for="speak">Robot speaks out loud (when it has a voice)</label></div>
       </section>
+      <section class="panel" aria-labelledby="hand-h">
+        <h2 id="hand-h">Hand lab: Pollen Amazing Hand</h2>
+        <div class="handbox"><canvas id="handView" aria-label="Pollen Robotics Amazing Hand, 3D"></canvas><div class="handmsg" id="handMsg">Loading Pollen's hand model…</div></div>
+        <div class="row posebtns" id="handPoses" style="margin-top:8px"></div>
+        <div class="field"><label for="handT">Finger travel</label>
+          <div class="rangewrap"><input type="range" id="handT" min="0" max="100" value="0"><output for="handT" id="handT_o">0%</output></div></div>
+        <div class="servos" id="handServo"></div>
+        <div class="row" style="margin-top:6px"><button class="btn" id="b-handDemo">Play Pollen's demo</button><button class="btn" id="b-fitHand">Fit it to the robot</button></div>
+        <p class="small">Real parts and finger linkages from Pollen Robotics' open-source model (Apache 2.0, design CC BY 4.0). Servo angles come from their demo code. Drag to turn it.</p>
+      </section>
       <section class="panel" aria-labelledby="prog-h">
         <h2 id="prog-h">Program</h2>
         <textarea id="program" rows="8" spellcheck="false"></textarea>
         <div class="row" style="margin-top:6px">
           <button class="btn primary" id="b-run">Run</button>
           <button class="btn" id="b-stop">Stop</button>
-          <span class="small">forward/back mm · turn deg · look deg · face mood · say text · pick colour · place colour · goto colour · dance · tidy · wait s</span>
+          <span class="small">forward/back mm · turn deg · look deg · face mood · hand pose · say text · pick colour · place colour · goto colour · dance · tidy · wait s</span>
         </div>
       </section>
       <section class="panel" aria-labelledby="save-h">
@@ -590,6 +605,10 @@ function buildRobot() {
 }
 
 function buildHand(type, len, aw) {
+  if (type === "amazing_hand") {
+    if (pollen.state === "ready") { var ph = makePollenHand(pollen.data); return { group: ph.group, fingers: [], pollen: ph }; }
+    if (pollen.state === "idle" || pollen.state === "loading") loadPollenHand().then(function () { if (state.cfg.hand === "amazing_hand") buildRobot(); }, function () {});
+  }
   var g = new THREE.Group(), fingers = [];
   if (type === "gripper2") {
     var palm = boxm(aw * 1.4, len * 0.35, aw * 0.9, mat.black); palm.position.y = len * 0.17; g.add(palm);
@@ -616,6 +635,69 @@ function buildHand(type, len, aw) {
     g.add(th); fingers.push({ g: th, kind: "thumb" });
   }
   return { group: g, fingers: fingers };
+}
+
+/* ---------------- Pollen Robotics Amazing Hand ---------------- */
+// Parts and finger motion recorded from Pollen's own MuJoCo model by sim/export_pollen_hand.py:
+// for each named pose, frames from fully open (t = 0) to the pose (t = 1).
+var pollen = { state: "idle", data: null, promise: null };
+function loadPollenHand() {
+  if (pollen.promise) return pollen.promise;
+  pollen.state = "loading";
+  var get = function (url, kind) { return fetch(url).then(function (r) { if (!r.ok) throw new Error(url + " " + r.status); return r[kind](); }); };
+  pollen.promise = Promise.all([get("pollen_hand.json", "json"), get("pollen_hand.bin", "arrayBuffer")]).then(function (res) {
+    var meta = res[0], buf = res[1];
+    var V = new Float32Array(buf, 0, meta.verts_bytes / 4), I = new Uint16Array(buf, meta.verts_bytes, meta.index_bytes / 2);
+    var geos = meta.meshes.map(function (m) {
+      var g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.BufferAttribute(V.subarray(m.vert_offset * 3, (m.vert_offset + m.vert_count) * 3), 3));
+      g.setIndex(new THREE.BufferAttribute(I.subarray(m.index_offset, m.index_offset + m.index_count), 1));
+      g.computeVertexNormals();
+      return g;
+    });
+    var mats = {};
+    pollen.data = { meta: meta, geos: geos, frames: new Float32Array(buf, meta.frames_offset),
+      mat: function (rgb) { var k = rgb.join(); return mats[k] || (mats[k] = new THREE.MeshStandardMaterial({ color: new THREE.Color(rgb[0], rgb[1], rgb[2]), roughness: 0.55, metalness: 0.05 })); } };
+    pollen.state = "ready";
+    return pollen.data;
+  }).catch(function (e) { pollen.state = "failed"; pollen.error = e; throw e; });
+  return pollen.promise;
+}
+var _q0 = new THREE.Quaternion(), _q1 = new THREE.Quaternion();
+function makePollenHand(d) {
+  // Pollen's frame has the fingers along +z; turn it so they run along +y like the other hands.
+  var outer = new THREE.Group(), inner = new THREE.Group(); inner.rotation.x = -Math.PI / 2; outer.add(inner);
+  var parts = d.meta.geoms.map(function (gm) { var m = new THREE.Mesh(d.geos[gm.mesh], d.mat(gm.rgb)); m.castShadow = true; inner.add(m); return m; });
+  var hand = { group: outer, parts: parts, set: function (pose, t) {
+    var P = Math.max(0, d.meta.poses.indexOf(pose)), nF = d.meta.frames_per_pose, nG = parts.length, F = d.frames;
+    t = Math.max(0, Math.min(1, t));
+    var x = t * (nF - 1), k = Math.min(nF - 2, Math.floor(x)), a = x - k;
+    var b0 = (P * nF + k) * nG * 7, b1 = (P * nF + k + 1) * nG * 7;
+    for (var i = 0; i < nG; i++) {
+      var o0 = b0 + i * 7, o1 = b1 + i * 7, m = parts[i];
+      m.position.set(F[o0] + (F[o1] - F[o0]) * a, F[o0 + 1] + (F[o1 + 1] - F[o0 + 1]) * a, F[o0 + 2] + (F[o1 + 2] - F[o0 + 2]) * a);
+      _q0.set(F[o0 + 4], F[o0 + 5], F[o0 + 6], F[o0 + 3]); _q1.set(F[o1 + 4], F[o1 + 5], F[o1 + 6], F[o1 + 3]);
+      m.quaternion.copy(_q0).slerp(_q1, a);
+    }
+  } };
+  hand.set("open", 0);
+  return hand;
+}
+// Servo angles (degrees) for a pose part-way between open and the named pose, as Pollen's demo would send them.
+function pollenServos(pose, t) {
+  var deg = pollen.data.meta.servo_degrees, o = deg.open, p = deg[pose] || o;
+  return p.map(function (a, i) { return [o[i][0] + (a[0] - o[i][0]) * t, o[i][1] + (a[1] - o[i][1]) * t]; });
+}
+// One named pose shared by the robot's hand (when it is the Amazing Hand) and the hand lab.
+// Switching between two poses goes back through open, the way the real servos would.
+var handPose = { name: "close", t: 0, target: 0, active: false, next: null };
+function setHandPose(name) {
+  handPose.next = null;
+  if (name === "open") { handPose.target = 0; }
+  else if (handPose.name === name || handPose.t < 0.02) { handPose.name = name; handPose.target = 1; }
+  else { handPose.next = name; handPose.target = 0; }
+  handPose.active = true;
+  updatePoseButtons();
 }
 
 /* ---------------- Simulation ---------------- */
@@ -714,6 +796,9 @@ function step(dt) {
 
   // Arm targets, squat and the hand
   robot.squat += (robot.squatTarget - robot.squat) * Math.min(1, dt * 3);
+  handPose.t += Math.max(-dt * 1.2, Math.min(dt * 1.2, handPose.target - handPose.t));
+  if (handPose.next && handPose.t < 0.01) { handPose.name = handPose.next; handPose.next = null; handPose.target = 1; updatePoseButtons(); }
+  runHandDemo(dt);
   updateArm(dt);
   // Falling blocks
   blocks.forEach(function (b) {
@@ -779,6 +864,7 @@ function startPick(color) {
   var b = nearestBlock(color);
   if (!b) { say(color ? "I can't find a " + color + " block." : "No blocks left to pick up.", false); return false; }
   autopilot = { type: "pick", block: b, phase: "approach", t: 0 };
+  handPose.active = false; updatePoseButtons();
   return true;
 }
 function startPlace(color) {
@@ -977,6 +1063,7 @@ function runProgram(dt) {
     logLine("bot", "· " + line);
     if (cmd === "say") { say(arg, true); p.cur = { cmd: "wait", n: Math.min(3, 0.4 + arg.length * 0.05), t: 0 }; }
     else if (cmd === "face") { face.mood = arg || "normal"; p.cur = null; }
+    else if (cmd === "hand") { if (!handCommand(arg)) logLine("err", "Hand poses: open, close, spread, clench, point"); p.cur = { cmd: "wait", n: 1.0, t: 0 }; }
     else if (cmd === "look") { robot.camTilt = Math.max(-45, Math.min(45, n || 0)) * Math.PI / 180; p.cur = { cmd: "wait", n: 0.4, t: 0 }; }
     else if (cmd === "pick") { if (!startPick(arg || null)) p.cur = null; else p.cur = { cmd: "auto" }; }
     else if (cmd === "place") { if (!startPlace(arg || null)) p.cur = null; else p.cur = { cmd: "auto" }; }
@@ -1050,6 +1137,12 @@ function hear(text) {
   if (/\b(pick|grab|get|lift)\b/.test(t)) return startPick(col[0] || null);
   if (/\b(drop|place|put)\b/.test(t)) return startPlace(col[0] || null);
   if (/\b(go|drive|walk) to\b/.test(t)) return startGoto(/pad/.test(t) ? "pad" : col[0]);
+  var hp = t.match(/\b(fist|close your hand|grab hand|spread|clench|point|open your hand|open hand|hand (open|close|spread|clench|point))\b/);
+  if (hp) {
+    var name = /fist|close/.test(hp[0]) ? "close" : /spread/.test(hp[0]) ? "spread" : /clench/.test(hp[0]) ? "clench" : /point/.test(hp[0]) ? "point" : "open";
+    handCommand(name);
+    return say(state.cfg.arm && state.cfg.hand === "amazing_hand" ? "Hand: " + name + "." : "My hand isn't the Amazing Hand, so I'm showing it in the Hand lab.", true);
+  }
   if (/\bdance\b/.test(t)) { program = { lines: ["dance", "face normal"], i: 0, cur: null }; return; }
   if (/\b(stop|halt|freeze)\b/.test(t)) { autopilot = null; program = null; armTarget = null; standUp(); say("Stopped.", true); return; }
   if (/(what can you do|abilities|skills)/.test(t)) {
@@ -1142,6 +1235,10 @@ function poseRobot(t) {
     R.arm.elbow.rotation.x = armPose.el;
     R.arm.wrist.rotation.x = armPose.wr;
     var g = armPose.grip;
+    if (R.arm.hand.pollen) {
+      if (handPose.active && !autopilot) R.arm.hand.pollen.set(handPose.name, handPose.t);
+      else R.arm.hand.pollen.set("close", g);
+    }
     R.arm.hand.fingers.forEach(function (f) {
       if (f.kind === "jaw") f.g.position.x = f.side * f.spread * (1.6 - g * 0.85);
       else if (f.kind === "finger") { f.g.rotation.x = g * 0.9; f.g2.rotation.x = g * 1.0; }
@@ -1149,7 +1246,8 @@ function poseRobot(t) {
     });
     if (robot.held && robot.held.mesh.parent !== R.arm.hand.group) {
       scene.remove(robot.held.mesh); R.arm.hand.group.add(robot.held.mesh);
-      robot.held.mesh.position.set(0, R.arm.hl * 0.8, 0); robot.held.mesh.rotation.set(0, 0, 0);
+      if (R.arm.hand.pollen) robot.held.mesh.position.set(0.035, 0.1, 0); else robot.held.mesh.position.set(0, R.arm.hl * 0.8, 0);
+      robot.held.mesh.rotation.set(0, 0, 0);
     }
   }
 }
@@ -1163,10 +1261,13 @@ new ResizeObserver(resize).observe(box);
 
 var last = performance.now(), hudEl = $("hud");
 function frame(now) {
-  var dt = Math.min(0.05, (now - last) / 1000); last = now;
-  step(dt);
+  // Step the simulation in small slices so it keeps real time even when drawing is slow.
+  var real = Math.min(0.25, (now - last) / 1000); last = now;
+  var dt = Math.min(0.05, real);
+  for (var left = real; left > 1e-4; left -= 0.03) step(Math.min(0.03, left));
   poseRobot(now / 1000);
   if (face.mood) drawFace(now / 1000);
+  renderHandLab(now);
   if (bubbleTimer > 0) { bubbleTimer -= dt; if (bubbleTimer <= 0) $("bubble").hidden = true; }
 
   // main camera
@@ -1231,6 +1332,80 @@ $("b-reset").addEventListener("click", function () {
 $("b-run").addEventListener("click", startProgram);
 $("b-stop").addEventListener("click", function () { program = null; autopilot = null; armTarget = null; standUp(); logLine("bot", "Stopped."); });
 
+/* ---------------- Hand lab ---------------- */
+var POSE_NAMES = ["open", "close", "spread", "clench", "point"];
+function handCommand(name) {
+  if (POSE_NAMES.indexOf(name) < 0) return false;
+  handDemo = null; setHandPose(name); return true;
+}
+var handDemo = null;
+// Pollen's AmazingHand_Demo.py steps through these poses with short holds.
+var DEMO = [["close", 1, 1.2], ["close", 0, 0.8], ["spread", 1, 1.0], ["spread", 0, 0.6], ["clench", 1, 1.0], ["clench", 0, 0.6], ["point", 1, 1.2], ["point", 0, 0.8]];
+function runHandDemo(dt) {
+  if (!handDemo) return;
+  var st = DEMO[handDemo.i];
+  if (handDemo.t === 0) { handPose.active = true; if (handPose.name !== st[0] && handPose.t < 0.02) handPose.name = st[0]; handPose.target = st[1]; updatePoseButtons(); }
+  handDemo.t += dt;
+  if (Math.abs(handPose.t - st[1]) < 0.01 && handDemo.t > st[2]) { handDemo.i++; handDemo.t = 0; if (handDemo.i >= DEMO.length) { handDemo = null; updatePoseButtons(); } }
+}
+var poseWrap = $("handPoses");
+POSE_NAMES.forEach(function (n) {
+  var b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = n[0].toUpperCase() + n.slice(1); b.dataset.pose = n;
+  b.addEventListener("click", function () { handCommand(n); });
+  poseWrap.appendChild(b);
+});
+function updatePoseButtons() {
+  Array.prototype.forEach.call(poseWrap.children, function (b) {
+    var on = b.dataset.pose === "open" ? handPose.target === 0 : (handPose.name === b.dataset.pose && handPose.target === 1);
+    b.setAttribute("aria-pressed", String(on));
+  });
+}
+$("handT").addEventListener("input", function () {
+  handDemo = null; handPose.active = true; handPose.t = handPose.target = +this.value / 100; updatePoseButtons();
+});
+$("b-handDemo").addEventListener("click", function () { handDemo = { i: 0, t: 0 }; logLine("bot", "Playing Pollen's Amazing Hand demo."); });
+$("b-fitHand").addEventListener("click", function () {
+  state.cfg.arm = true; state.cfg.hand = "amazing_hand"; if (P.servos[state.cfg.arm_servo].stall_nm < 1) state.cfg.arm_servo = "sts3215";
+  cfgToForm(); refresh(true);
+  logLine("bot", "Fitted the Amazing Hand. Check the Will it work? panel: it weighs about 400 g.");
+});
+
+var lab = { renderer: null, scene: null, camera: null, hand: null, theta: 0.9, phi: 1.2, drag: null };
+(function setupHandLab() {
+  var cv = $("handView");
+  lab.renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+  lab.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  lab.scene = new THREE.Scene();
+  lab.scene.add(new THREE.HemisphereLight(0xffffff, 0x7d848c, 0.8));
+  var l = new THREE.DirectionalLight(0xffffff, 0.7); l.position.set(0.4, 0.6, 0.5); lab.scene.add(l);
+  lab.camera = new THREE.PerspectiveCamera(35, 4 / 3, 0.01, 5);
+  cv.addEventListener("pointerdown", function (e) { lab.drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener("pointermove", function (e) { if (!lab.drag) return; lab.theta -= (e.clientX - lab.drag.x) * 0.01; lab.phi = Math.max(0.3, Math.min(2.6, lab.phi - (e.clientY - lab.drag.y) * 0.01)); lab.drag = { x: e.clientX, y: e.clientY }; });
+  cv.addEventListener("pointerup", function () { lab.drag = null; });
+  new IntersectionObserver(function (es) { lab.visible = es[0].isIntersecting; }).observe(cv);
+  new ResizeObserver(function () { var r = cv.getBoundingClientRect(); if (!r.width) return; lab.renderer.setSize(r.width, r.height, false); lab.camera.aspect = r.width / r.height; lab.camera.updateProjectionMatrix(); }).observe(cv);
+  loadPollenHand().then(function (d) {
+    lab.hand = makePollenHand(d); lab.scene.add(lab.hand.group);
+    $("handMsg").hidden = true; updatePoseButtons();
+  }, function () {
+    $("handMsg").textContent = "Couldn't load pollen_hand.json and pollen_hand.bin. Serve the sandbox folder over http (see README).";
+  });
+})();
+function renderHandLab(now) {
+  if (!lab.hand || !lab.visible || now - (lab.last || 0) < 50) return;
+  lab.last = now;
+  lab.scene.background = scene.background;
+  lab.hand.set(handPose.name, handPose.t);
+  if (!lab.drag && !handPose.active) lab.theta += 0.004;
+  var d = 0.3, cy = 0.1;
+  lab.camera.position.set(d * Math.sin(lab.phi) * Math.sin(lab.theta), cy + d * Math.cos(lab.phi), d * Math.sin(lab.phi) * Math.cos(lab.theta));
+  lab.camera.lookAt(0.03, cy, 0);
+  lab.renderer.render(lab.scene, lab.camera);
+  $("handT").value = Math.round(handPose.t * 100); $("handT_o").textContent = Math.round(handPose.t * 100) + "%";
+  var sv = pollenServos(handPose.name, handPose.t), names = ["index", "middle", "ring", "thumb"];
+  $("handServo").textContent = "Servo angles sent: " + sv.map(function (a, i) { return names[i] + " " + Math.round(a[0]) + "°/" + Math.round(a[1]) + "°"; }).join(" · ");
+}
+
 /* ---------------- Saved designs ---------------- */
 var saved = store("robot.designs") || [];
 function renderSaved() {
@@ -1270,6 +1445,6 @@ cfgToForm(); refresh(true); renderSaved(); resize();
 logLine("bot", "Hi! I'm your robot, stage 1. Drive me with W A S D, then evolve me with the stage buttons.");
 requestAnimationFrame(frame);
 // Read-only hook for automated tests (sandbox/test_sandbox.js).
-window.__robot = { robot: robot, blocks: function () { return blocks; }, task: function () { return autopilot && (autopilot.type + ":" + (autopilot.phase || "")); }, arm: armPose };
+window.__robot = { hand: function () { return { state: pollen.state, pose: handPose.name, t: handPose.t, onRobot: !!(R && R.arm && R.arm.hand.pollen) }; }, robot: robot, blocks: function () { return blocks; }, task: function () { return autopilot && (autopilot.type + ":" + (autopilot.phase || "")); }, arm: armPose };
 })();
 </script>

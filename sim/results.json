@@ -263,13 +263,13 @@
     "mass_g": 1716,
     "stand_ok": true,
     "stand_height_mm": 178,
-    "stand_knee_load": 0.04,
+    "stand_knee_load": 0.05,
     "squat_ok": true,
     "squat_knee_load": 0.39,
     "arm": {
       "shoulder_sag_deg": 0.2,
       "shoulder_load": 1.0,
-      "body_tilt_deg": 43.6,
+      "body_tilt_deg": 36.5,
       "holds": false,
       "tips": true
     },
@@ -299,7 +299,7 @@
         ],
         [
           "elbow",
-          "pass"
+          "warn"
         ],
         [
           "tip",
