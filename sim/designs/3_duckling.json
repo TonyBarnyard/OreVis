@@ -1,0 +1,22 @@
+{
+  "name": "Duckling",
+  "body_mm": 170,
+  "height_mm": 95,
+  "locomotion": "legs",
+  "drive_motor": "n20_100rpm",
+  "wheel_mm": 34,
+  "leg_servo": "sts3215",
+  "leg_mm": 170,
+  "arm": false,
+  "arm_servo": "sts3215",
+  "arm_mm": [
+    90,
+    80
+  ],
+  "hand": "gripper2",
+  "brain": "pi_zero_2w",
+  "battery": "lipo2s_2200",
+  "voice": false,
+  "mast_mm": 30,
+  "payload_g": 20
+}

@@ -1,0 +1,359 @@
+[
+  {
+    "name": "Hatchling",
+    "locomotion": "wheels",
+    "mass_g": 385,
+    "top_speed_mps": 0.176,
+    "max_ramp_deg": 35,
+    "max_step_mm": 10,
+    "step_misses_mm": [],
+    "sandbox_prediction": {
+      "speed": 0.15132004614790837,
+      "step": 9,
+      "checks": [
+        [
+          "drive",
+          "pass"
+        ],
+        [
+          "battery",
+          "pass"
+        ],
+        [
+          "runtime",
+          "pass"
+        ]
+      ]
+    }
+  },
+  {
+    "name": "Explorer",
+    "locomotion": "tracks",
+    "mass_g": 432,
+    "top_speed_mps": 0.225,
+    "max_ramp_deg": 25,
+    "max_step_mm": 15,
+    "step_misses_mm": [],
+    "sandbox_prediction": {
+      "speed": 0.1664520507626992,
+      "step": 22,
+      "checks": [
+        [
+          "drive",
+          "pass"
+        ],
+        [
+          "battery",
+          "pass"
+        ],
+        [
+          "runtime",
+          "pass"
+        ]
+      ]
+    }
+  },
+  {
+    "name": "Duckling",
+    "locomotion": "legs",
+    "mass_g": 1076,
+    "stand_ok": true,
+    "stand_height_mm": 178,
+    "stand_knee_load": 0.07,
+    "squat_ok": true,
+    "squat_knee_load": 0.32,
+    "sandbox_prediction": {
+      "speed": 0.1275,
+      "step": 27,
+      "checks": [
+        [
+          "knee",
+          "pass"
+        ],
+        [
+          "fit",
+          "pass"
+        ],
+        [
+          "feedback",
+          "pass"
+        ],
+        [
+          "brain_walk",
+          "pass"
+        ],
+        [
+          "battery",
+          "pass"
+        ],
+        [
+          "runtime",
+          "pass"
+        ]
+      ]
+    }
+  },
+  {
+    "name": "Helper",
+    "locomotion": "legs",
+    "mass_g": 1361,
+    "stand_ok": true,
+    "stand_height_mm": 178,
+    "stand_knee_load": 0.07,
+    "squat_ok": true,
+    "squat_knee_load": 0.36,
+    "arm": {
+      "shoulder_sag_deg": 0.2,
+      "shoulder_load": 0.64,
+      "body_tilt_deg": 0.5,
+      "holds": true,
+      "tips": false
+    },
+    "sandbox_prediction": {
+      "speed": 0.1275,
+      "step": 27,
+      "checks": [
+        [
+          "knee",
+          "warn"
+        ],
+        [
+          "fit",
+          "pass"
+        ],
+        [
+          "feedback",
+          "pass"
+        ],
+        [
+          "brain_walk",
+          "pass"
+        ],
+        [
+          "shoulder",
+          "pass"
+        ],
+        [
+          "elbow",
+          "pass"
+        ],
+        [
+          "tip",
+          "warn"
+        ],
+        [
+          "battery",
+          "pass"
+        ],
+        [
+          "runtime",
+          "pass"
+        ]
+      ]
+    }
+  },
+  {
+    "name": "Companion",
+    "locomotion": "legs",
+    "mass_g": 1429,
+    "stand_ok": true,
+    "stand_height_mm": 187,
+    "stand_knee_load": 0.08,
+    "squat_ok": true,
+    "squat_knee_load": 0.4,
+    "arm": {
+      "shoulder_sag_deg": 0.2,
+      "shoulder_load": 0.64,
+      "body_tilt_deg": 0.4,
+      "holds": true,
+      "tips": false
+    },
+    "sandbox_prediction": {
+      "speed": 0.135,
+      "step": 29,
+      "checks": [
+        [
+          "knee",
+          "warn"
+        ],
+        [
+          "fit",
+          "pass"
+        ],
+        [
+          "feedback",
+          "pass"
+        ],
+        [
+          "brain_walk",
+          "pass"
+        ],
+        [
+          "shoulder",
+          "pass"
+        ],
+        [
+          "elbow",
+          "pass"
+        ],
+        [
+          "tip",
+          "pass"
+        ],
+        [
+          "battery",
+          "pass"
+        ],
+        [
+          "runtime",
+          "pass"
+        ]
+      ]
+    }
+  },
+  {
+    "name": "Hatchling + micro-servo arm",
+    "locomotion": "wheels",
+    "mass_g": 480,
+    "top_speed_mps": 0.176,
+    "max_ramp_deg": 35,
+    "max_step_mm": 10,
+    "step_misses_mm": [],
+    "arm": {
+      "shoulder_sag_deg": 0.6,
+      "shoulder_load": 0.93,
+      "body_tilt_deg": 0.0,
+      "holds": true,
+      "tips": false
+    },
+    "sandbox_prediction": {
+      "speed": 0.15132004614790837,
+      "step": 9,
+      "checks": [
+        [
+          "drive",
+          "pass"
+        ],
+        [
+          "shoulder",
+          "warn"
+        ],
+        [
+          "elbow",
+          "pass"
+        ],
+        [
+          "tip",
+          "pass"
+        ],
+        [
+          "battery",
+          "pass"
+        ],
+        [
+          "runtime",
+          "pass"
+        ]
+      ]
+    }
+  },
+  {
+    "name": "Helper + Amazing Hand",
+    "locomotion": "legs",
+    "mass_g": 1716,
+    "stand_ok": true,
+    "stand_height_mm": 178,
+    "stand_knee_load": 0.05,
+    "squat_ok": true,
+    "squat_knee_load": 0.39,
+    "arm": {
+      "shoulder_sag_deg": 0.2,
+      "shoulder_load": 1.0,
+      "body_tilt_deg": 36.5,
+      "holds": false,
+      "tips": true
+    },
+    "sandbox_prediction": {
+      "speed": 0.1275,
+      "step": 27,
+      "checks": [
+        [
+          "knee",
+          "warn"
+        ],
+        [
+          "fit",
+          "pass"
+        ],
+        [
+          "feedback",
+          "pass"
+        ],
+        [
+          "brain_walk",
+          "pass"
+        ],
+        [
+          "shoulder",
+          "fail"
+        ],
+        [
+          "elbow",
+          "warn"
+        ],
+        [
+          "tip",
+          "fail"
+        ],
+        [
+          "battery",
+          "pass"
+        ],
+        [
+          "runtime",
+          "pass"
+        ]
+      ]
+    }
+  },
+  {
+    "name": "Mini duck on SG90 servos",
+    "locomotion": "legs",
+    "mass_g": 473,
+    "stand_ok": true,
+    "stand_height_mm": 113,
+    "stand_knee_load": 0.22,
+    "squat_ok": true,
+    "squat_knee_load": 1.0,
+    "sandbox_prediction": {
+      "speed": 0,
+      "step": 16,
+      "checks": [
+        [
+          "knee",
+          "fail"
+        ],
+        [
+          "fit",
+          "pass"
+        ],
+        [
+          "feedback",
+          "fail"
+        ],
+        [
+          "brain_walk",
+          "pass"
+        ],
+        [
+          "battery",
+          "pass"
+        ],
+        [
+          "runtime",
+          "pass"
+        ]
+      ]
+    }
+  }
+]

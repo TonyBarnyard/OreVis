@@ -1,0 +1,1614 @@
+<meta charset="utf-8">
+<title>Modular Robot Sandbox</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: workshop bench. Parts and checks on the left, the 3D test room in the
+   middle, missions and the robot's terminal on the right. Stacks on phones. */
+:root {
+  --bg: #eef0f2; --panel: #ffffff; --ink: #1b2229; --muted: #5d6874; --line: #d6dbe0;
+  --accent: #f26b1d; --accent-ink: #ffffff; --led: #2f8cff;
+  --pass: #1f8a4c; --warn: #b77400; --fail: #c4352b;
+  --pass-bg: #e3f4ea; --warn-bg: #fbf0d9; --fail-bg: #fbe4e1;
+  --room: #dfe4e8;
+  --display: "Chakra Petch", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12171c; --panel: #1a2128; --ink: #e7ecf0; --muted: #9aa6b2; --line: #2c3640;
+  --accent: #ff7a2e; --accent-ink: #160b04; --led: #59a6ff;
+  --pass: #4fc785; --warn: #f0b43c; --fail: #ff6b5e;
+  --pass-bg: #163325; --warn-bg: #36290f; --fail-bg: #3c1a17; --room: #1d252c; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #12171c; --panel: #1a2128; --ink: #e7ecf0; --muted: #9aa6b2; --line: #2c3640;
+  --accent: #ff7a2e; --accent-ink: #160b04; --led: #59a6ff;
+  --pass: #4fc785; --warn: #f0b43c; --fail: #ff6b5e;
+  --pass-bg: #163325; --warn-bg: #36290f; --fail-bg: #3c1a17; --room: #1d252c; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 14px; line-height: 1.45; }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 14px 24px; max-width: 1680px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+header.top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; }
+h1 { font-family: var(--display); font-weight: 700; font-size: 26px; letter-spacing: .01em; margin: 0; }
+h1 span { color: var(--accent); }
+.sub { color: var(--muted); margin: 0; }
+h2 { font-family: var(--display); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .09em; color: var(--muted); margin: 0 0 8px; }
+.grid { display: grid; grid-template-columns: 330px minmax(0, 1fr) 330px; gap: 12px; align-items: start; }
+@media (max-width: 1250px) { .grid { grid-template-columns: 320px minmax(0, 1fr); } .right { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; } }
+@media (max-width: 820px) { .grid { grid-template-columns: minmax(0, 1fr); } .center { order: -1; } }
+.col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+
+/* Evolution track */
+.stages { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.stage { font-family: var(--display); font-weight: 600; font-size: 12px; border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 6px; padding: 6px 2px; cursor: pointer; line-height: 1.15; }
+.stage b { display: block; font-size: 16px; color: var(--accent); }
+.stage[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.stage[aria-pressed="true"] b { color: var(--accent-ink); }
+.blurb { color: var(--muted); margin: 8px 0 0; min-height: 2.9em; }
+
+.field { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 6px 8px; align-items: center; margin-top: 6px; }
+.field label { color: var(--muted); font-size: 13px; }
+select, input[type="number"], input[type="text"], textarea { font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; width: 100%; min-width: 0; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.rangewrap { display: flex; gap: 8px; align-items: center; }
+.rangewrap output { font-family: var(--mono); font-size: 12px; min-width: 54px; text-align: right; font-variant-numeric: tabular-nums; }
+details.group { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 10px; }
+details.group summary { cursor: pointer; font-family: var(--display); font-weight: 600; letter-spacing: .04em; }
+.toggle { display: flex; gap: 8px; align-items: center; margin-top: 6px; }
+
+button { font: inherit; cursor: pointer; }
+.btn { font-family: var(--display); font-weight: 600; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 7px; padding: 6px 11px; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn:focus-visible, .stage:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--led); outline-offset: 2px; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+
+/* Stats and checks */
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { min-width: 0; }
+.stat .v { font-family: var(--display); font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.stat .k { color: var(--muted); font-size: 12px; }
+.checks { list-style: none; padding: 0; margin: 10px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.checks li { display: grid; grid-template-columns: 46px minmax(0, 1fr); gap: 8px; align-items: start; }
+.pill { font-family: var(--mono); font-size: 10.5px; font-weight: 600; text-transform: uppercase; text-align: center; border-radius: 4px; padding: 2px 0; }
+.pill.pass { background: var(--pass-bg); color: var(--pass); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); }
+.pill.fail { background: var(--fail-bg); color: var(--fail); }
+.checks .t { font-weight: 700; }
+.checks .d { color: var(--muted); font-size: 12.5px; }
+.abil { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.chip { font-size: 12px; border-radius: 99px; padding: 2px 9px; border: 1px solid var(--line); }
+.chip.on { background: var(--pass-bg); color: var(--pass); border-color: transparent; }
+.chip.off { color: var(--muted); text-decoration: line-through; }
+
+/* 3D view */
+.stagebox { position: relative; background: var(--room); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; aspect-ratio: 16 / 10; max-width: 100%; }
+.stagebox canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.hud { position: absolute; left: 10px; top: 10px; display: flex; flex-direction: column; gap: 4px; pointer-events: none; }
+.hud span { font-family: var(--mono); font-size: 11.5px; background: color-mix(in srgb, var(--panel) 85%, transparent); border-radius: 5px; padding: 2px 7px; width: fit-content; }
+.pip-label { position: absolute; right: 10px; bottom: calc(26% + 14px); font-family: var(--mono); font-size: 11px; background: color-mix(in srgb, var(--panel) 85%, transparent); border-radius: 5px; padding: 2px 6px; pointer-events: none; }
+.handbox { position: relative; background: var(--room); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; aspect-ratio: 4 / 3; max-width: 100%; }
+.handbox canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.handmsg { position: absolute; inset: auto 8px 8px 8px; font-size: 12px; color: var(--muted); }
+.posebtns .btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.servos { font-family: var(--mono); font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pip-frame { position: absolute; border: 2px solid var(--ink); border-radius: 4px; pointer-events: none; }
+.bubble { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); max-width: 70%; background: var(--panel); border: 2px solid var(--accent); border-radius: 12px; padding: 6px 12px; font-weight: 700; pointer-events: none; }
+.drivepad { display: grid; grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(2, 40px); gap: 4px; }
+.drivepad .btn { padding: 0; font-size: 18px; }
+.controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+.kbd { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+
+/* Right column */
+.missions { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.missions li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+.tick { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+.tick.done { background: var(--pass); border-color: var(--pass); color: var(--panel); }
+.missions .need { color: var(--muted); font-size: 12px; }
+.log { font-family: var(--mono); font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px; height: 150px; overflow-y: auto; white-space: pre-wrap; }
+.log .me { color: var(--led); }
+.log .bot { color: var(--accent); }
+.log .err { color: var(--fail); }
+textarea { font-family: var(--mono); font-size: 12.5px; resize: vertical; }
+.small { font-size: 12px; color: var(--muted); }
+table.cmp { border-collapse: collapse; width: 100%; font-size: 12px; font-variant-numeric: tabular-nums; }
+table.cmp th, table.cmp td { text-align: left; padding: 3px 5px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.tablewrap { overflow-x: auto; }
+.parts { list-style: none; margin: 6px 0 0; padding: 0; font-size: 12.5px; }
+.parts li { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--line); padding: 2px 0; }
+.parts li span:last-child { font-family: var(--mono); white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Modular <span>Robot Sandbox</span></h1>
+    <p class="sub">Build it, drive it and break it here before you buy parts. Evolve the robot from wheels to legs, a hand and a voice.</p>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: design -->
+    <div class="col left">
+      <section class="panel" aria-labelledby="evo-h">
+        <h2 id="evo-h">Evolution stage</h2>
+        <div class="stages" id="stages" role="group" aria-label="Evolution stage"></div>
+        <p class="blurb" id="blurb"></p>
+      </section>
+
+      <section class="panel" aria-labelledby="design-h">
+        <h2 id="design-h">Design</h2>
+        <div class="field"><label for="locomotion">Moves on</label>
+          <select id="locomotion"><option value="wheels">Four wheels</option><option value="tracks">Track panels</option><option value="legs">Two legs (Open Duck style)</option></select></div>
+        <div class="field"><label for="brain">Brain</label><select id="brain"></select></div>
+        <div class="field"><label for="battery">Battery</label><select id="battery"></select></div>
+        <div class="field"><label for="body_mm">Body size</label>
+          <div class="rangewrap"><input type="range" id="body_mm" min="100" max="260" step="5"><output for="body_mm" id="body_mm_o"></output></div></div>
+        <div class="field"><label for="height_mm">Body height</label>
+          <div class="rangewrap"><input type="range" id="height_mm" min="60" max="140" step="5"><output for="height_mm" id="height_mm_o"></output></div></div>
+        <div class="field"><label for="mast_mm">Camera spiral</label>
+          <div class="rangewrap"><input type="range" id="mast_mm" min="10" max="60" step="5"><output for="mast_mm" id="mast_mm_o"></output></div></div>
+
+        <details class="group" id="g-wheels" open><summary>Wheels and tracks</summary>
+          <div class="field"><label for="drive_motor">Motors</label><select id="drive_motor"></select></div>
+          <div class="field"><label for="wheel_mm">Wheel size</label>
+            <div class="rangewrap"><input type="range" id="wheel_mm" min="24" max="60" step="2"><output for="wheel_mm" id="wheel_mm_o"></output></div></div>
+        </details>
+        <details class="group" id="g-legs" open><summary>Legs</summary>
+          <div class="field"><label for="leg_servo">Leg servos</label><select id="leg_servo"></select></div>
+          <div class="field"><label for="leg_mm">Leg length</label>
+            <div class="rangewrap"><input type="range" id="leg_mm" min="60" max="260" step="5"><output for="leg_mm" id="leg_mm_o"></output></div></div>
+        </details>
+        <details class="group" open><summary>Arm and hand</summary>
+          <div class="toggle"><input type="checkbox" id="arm"><label for="arm">Fit an arm</label></div>
+          <div class="field"><label for="hand">Hand</label><select id="hand"></select></div>
+          <div class="field"><label for="arm_servo">Arm servos</label><select id="arm_servo"></select></div>
+          <div class="field"><label for="arm_l1">Upper arm</label>
+            <div class="rangewrap"><input type="range" id="arm_l1" min="40" max="160" step="5"><output for="arm_l1" id="arm_l1_o"></output></div></div>
+          <div class="field"><label for="arm_l2">Forearm</label>
+            <div class="rangewrap"><input type="range" id="arm_l2" min="40" max="160" step="5"><output for="arm_l2" id="arm_l2_o"></output></div></div>
+          <div class="field"><label for="payload_g">Block weight</label>
+            <div class="rangewrap"><input type="range" id="payload_g" min="5" max="300" step="5"><output for="payload_g" id="payload_g_o"></output></div></div>
+        </details>
+        <details class="group" open><summary>Voice</summary>
+          <div class="toggle"><input type="checkbox" id="voice"><label for="voice">Microphone and speaker</label></div>
+        </details>
+      </section>
+
+      <section class="panel" aria-labelledby="checks-h">
+        <h2 id="checks-h">Will it work?</h2>
+        <div class="stats">
+          <div class="stat"><div class="v" id="s-mass"></div><div class="k">mass</div></div>
+          <div class="stat"><div class="v" id="s-speed"></div><div class="k">top speed</div></div>
+          <div class="stat"><div class="v" id="s-run"></div><div class="k">battery life</div></div>
+          <div class="stat"><div class="v" id="s-cost"></div><div class="k">parts, AUD</div></div>
+          <div class="stat"><div class="v" id="s-step"></div><div class="k">step it can climb</div></div>
+          <div class="stat"><div class="v" id="s-watt"></div><div class="k">average power</div></div>
+        </div>
+        <ul class="checks" id="checks"></ul>
+        <h2 style="margin-top:12px">What it can do</h2>
+        <div class="abil" id="abil"></div>
+        <details class="group"><summary>Parts list</summary><ul class="parts" id="parts"></ul></details>
+        <p class="small">Hand calculations for comparing designs. Confirm with the MuJoCo tests in <code>sim/</code> and with real parts.</p>
+      </section>
+    </div>
+
+    <!-- CENTER: world -->
+    <div class="col center">
+      <div class="stagebox" id="stagebox">
+        <canvas id="view" aria-label="3D test room with the robot"></canvas>
+        <div class="hud" id="hud"></div>
+        <div class="pip-frame" id="pipFrame"></div>
+        <div class="pip-label" id="pipLabel">ROBOT CAMERA</div>
+        <div class="bubble" id="bubble" hidden></div>
+      </div>
+      <div class="panel controls">
+        <div class="drivepad" aria-label="Drive controls">
+          <span></span><button class="btn" data-drive="f" aria-label="Forward">▲</button><span></span>
+          <button class="btn" data-drive="l" aria-label="Turn left">◀</button><button class="btn" data-drive="b" aria-label="Back">▼</button><button class="btn" data-drive="r" aria-label="Turn right">▶</button>
+        </div>
+        <div class="row">
+          <button class="btn" id="b-grab">Grab nearest</button>
+          <button class="btn" id="b-drop">Drop</button>
+          <button class="btn" id="b-look">Tilt camera</button>
+          <button class="btn" id="b-cam">Camera: follow</button>
+          <button class="btn" id="b-reset">Reset room</button>
+        </div>
+        <div class="kbd">Keys: W A S D or arrows drive · G grab · R release · Q/E tilt camera · drag to orbit, wheel to zoom</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: missions, talk, program, saved -->
+    <div class="col right">
+      <section class="panel" aria-labelledby="mis-h">
+        <h2 id="mis-h">Missions</h2>
+        <ul class="missions" id="missions"></ul>
+      </section>
+      <section class="panel" aria-labelledby="talk-h">
+        <h2 id="talk-h">Talk to the robot</h2>
+        <div class="log" id="log" aria-live="polite"></div>
+        <form id="talkform" class="row" style="margin-top:6px">
+          <input type="text" id="talk" placeholder="Try: put the red block in the red bin" autocomplete="off" style="flex:1">
+          <button class="btn primary" type="submit">Say</button>
+        </form>
+        <div class="toggle"><input type="checkbox" id="speak" checked><label for="speak">Robot speaks out loud (when it has a voice)</label></div>
+      </section>
+      <section class="panel" aria-labelledby="walk-h">
+        <h2 id="walk-h">Walk lab: Open Duck Mini</h2>
+        <div class="handbox"><canvas id="walkView" aria-label="Open Duck Mini walking, 3D"></canvas><div class="handmsg" id="walkMsg">Loading the Open Duck model…</div></div>
+        <div class="row posebtns" id="walkClips" style="margin-top:8px"></div>
+        <div class="servos" id="walkStats"></div>
+        <div class="row" style="margin-top:6px"><button class="btn" id="b-growLegs">Grow these legs on the robot</button></div>
+        <p class="small">Every step is the Open Duck's own trained walking policy, run in MuJoCo physics and recorded (sim/open_duck_walk.py). Parts from Open_Duck_Mini, Apache 2.0. Drag to turn it.</p>
+      </section>
+      <section class="panel" aria-labelledby="hand-h">
+        <h2 id="hand-h">Hand lab: Pollen Amazing Hand</h2>
+        <div class="handbox"><canvas id="handView" aria-label="Pollen Robotics Amazing Hand, 3D"></canvas><div class="handmsg" id="handMsg">Loading Pollen's hand model…</div></div>
+        <div class="row posebtns" id="handPoses" style="margin-top:8px"></div>
+        <div class="field"><label for="handT">Finger travel</label>
+          <div class="rangewrap"><input type="range" id="handT" min="0" max="100" value="0"><output for="handT" id="handT_o">0%</output></div></div>
+        <div class="servos" id="handServo"></div>
+        <div class="row" style="margin-top:6px"><button class="btn" id="b-handDemo">Play Pollen's demo</button><button class="btn" id="b-fitHand">Fit it to the robot</button></div>
+        <p class="small">Real parts and finger linkages from Pollen Robotics' open-source model (Apache 2.0, design CC BY 4.0). Servo angles come from their demo code. Drag to turn it.</p>
+      </section>
+      <section class="panel" aria-labelledby="prog-h">
+        <h2 id="prog-h">Program</h2>
+        <textarea id="program" rows="8" spellcheck="false"></textarea>
+        <div class="row" style="margin-top:6px">
+          <button class="btn primary" id="b-run">Run</button>
+          <button class="btn" id="b-stop">Stop</button>
+          <span class="small">forward/back mm · turn deg · look deg · face mood · hand pose · say text · pick colour · place colour · goto colour · dance · tidy · wait s</span>
+        </div>
+      </section>
+      <section class="panel" aria-labelledby="save-h">
+        <h2 id="save-h">Compare designs</h2>
+        <div class="row">
+          <input type="text" id="saveName" placeholder="Design name" style="flex:1">
+          <button class="btn" id="b-save">Save</button>
+        </div>
+        <div class="tablewrap" style="margin-top:8px"><table class="cmp" id="cmp"></table></div>
+        <details class="group"><summary>Design file for the physics tests</summary>
+          <p class="small">Copy this into <code>sim/designs/my_design.json</code> and run <code>python sim/bench.py sim/designs/my_design.json</code>.</p>
+          <textarea id="json" rows="6" spellcheck="false"></textarea>
+          <div class="row" style="margin-top:6px"><button class="btn" id="b-copy">Copy</button><button class="btn" id="b-load">Load pasted design</button><span class="small" id="copyMsg"></span></div>
+        </details>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="parts.js"></script>
+<script src="model.js"></script>
+<script>
+(function () {
+"use strict";
+var P = window.ROBOT_PARTS, MODEL = window.RobotModel, MM = 0.001;
+var $ = function (id) { return document.getElementById(id); };
+function store(k, v) { try { if (v === undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k, JSON.stringify(v)); } catch (e) { return null; } }
+
+/* ---------------- Design state ---------------- */
+var ABILITY_NAMES = { drive: "Drive", walk: "Walk", face: "Animated face", obstacle: "Stop for obstacles", video: "Live video", climb: "Climb the 20 mm step", pick: "Pick and place", talk: "Talk", tasks: "Do tasks alone" };
+var state = { stage: 1, cfg: MODEL.clone(MODEL.STAGES[0].config) };
+var result = null;
+
+function fillSelect(id, obj) { var s = $(id); s.innerHTML = ""; Object.keys(obj).forEach(function (k) { var o = document.createElement("option"); o.value = k; o.textContent = obj[k].label; s.appendChild(o); }); }
+fillSelect("brain", P.brains); fillSelect("battery", P.batteries); fillSelect("drive_motor", P.drive_motors);
+fillSelect("leg_servo", P.servos); fillSelect("arm_servo", P.servos); fillSelect("hand", P.hands);
+
+var stageWrap = $("stages");
+MODEL.STAGES.forEach(function (s) {
+  var b = document.createElement("button"); b.className = "stage"; b.type = "button"; b.dataset.stage = s.id;
+  b.innerHTML = "<b>" + s.id + "</b>" + s.name; b.setAttribute("aria-pressed", "false");
+  b.addEventListener("click", function () { setStage(s.id); });
+  stageWrap.appendChild(b);
+});
+
+var ranges = ["body_mm", "height_mm", "mast_mm", "wheel_mm", "leg_mm", "arm_l1", "arm_l2", "payload_g"];
+function cfgToForm() {
+  var c = state.cfg;
+  ["locomotion", "brain", "battery", "drive_motor", "leg_servo", "arm_servo", "hand"].forEach(function (k) { $(k).value = c[k]; });
+  ["body_mm", "height_mm", "mast_mm", "wheel_mm", "leg_mm", "payload_g"].forEach(function (k) { $(k).value = c[k]; });
+  $("arm_l1").value = c.arm_mm[0]; $("arm_l2").value = c.arm_mm[1];
+  $("arm").checked = c.arm; $("voice").checked = c.voice;
+  updateOutputs();
+}
+function formToCfg() {
+  var c = state.cfg;
+  ["locomotion", "brain", "battery", "drive_motor", "leg_servo", "arm_servo", "hand"].forEach(function (k) { c[k] = $(k).value; });
+  ["body_mm", "height_mm", "mast_mm", "wheel_mm", "leg_mm", "payload_g"].forEach(function (k) { c[k] = +$(k).value; });
+  c.arm_mm = [+$("arm_l1").value, +$("arm_l2").value];
+  c.arm = $("arm").checked; c.voice = $("voice").checked;
+}
+function updateOutputs() { ranges.forEach(function (k) { $(k + "_o").textContent = $(k).value + (k === "payload_g" ? " g" : " mm"); }); }
+
+function setStage(id) {
+  var s = MODEL.STAGES[id - 1];
+  var prevLegs = state.cfg.locomotion === "legs";
+  state.stage = id; state.cfg = MODEL.clone(s.config);
+  cfgToForm(); refresh(true);
+  if (!prevLegs && state.cfg.locomotion === "legs") { growth = 0; say("I am growing legs!", true); }
+  logLine("bot", "Evolved to stage " + id + ": " + s.name + ".");
+}
+
+function fmtMass(g) { return g >= 1000 ? (g / 1000).toFixed(2) + " kg" : Math.round(g) + " g"; }
+function refresh(rebuild) {
+  result = MODEL.evaluate(state.cfg, P);
+  Array.prototype.forEach.call(stageWrap.children, function (b) { b.setAttribute("aria-pressed", String(+b.dataset.stage === state.stage)); });
+  $("blurb").textContent = MODEL.STAGES[state.stage - 1].blurb + (isCustom() ? " (customised)" : "");
+  $("g-wheels").hidden = state.cfg.locomotion === "legs";
+  $("g-legs").hidden = state.cfg.locomotion !== "legs";
+  $("s-mass").textContent = fmtMass(result.mass_g);
+  $("s-speed").textContent = result.speed_mps > 0 ? result.speed_mps.toFixed(2) + " m/s" : "0";
+  $("s-run").textContent = Math.round(result.runtime_min) + " min";
+  $("s-cost").textContent = "$" + Math.round(result.cost_aud[0]) + "–" + Math.round(result.cost_aud[1]);
+  $("s-step").textContent = result.step_mm + " mm";
+  $("s-watt").textContent = result.watts.toFixed(1) + " W";
+  var ul = $("checks"); ul.innerHTML = "";
+  result.checks.forEach(function (k) {
+    var li = document.createElement("li");
+    li.innerHTML = '<span class="pill ' + k.status + '">' + k.status + '</span><div><div class="t"></div><div class="d"></div></div>';
+    li.querySelector(".t").textContent = k.label; li.querySelector(".d").textContent = k.detail;
+    ul.appendChild(li);
+  });
+  var names = ABILITY_NAMES;
+  var ab = $("abil"); ab.innerHTML = "";
+  Object.keys(names).forEach(function (k) {
+    var a = result.abilities[k]; var s = document.createElement("span");
+    s.className = "chip " + (a.ok ? "on" : "off"); s.textContent = names[k]; if (!a.ok) s.title = a.reason; ab.appendChild(s);
+  });
+  var pl = $("parts"); pl.innerHTML = "";
+  result.parts.forEach(function (p) { var li = document.createElement("li"); li.innerHTML = "<span></span><span></span>"; li.firstChild.textContent = p.label; li.lastChild.textContent = p.mass + " g · $" + Math.round(p.aud[0]) + "–" + Math.round(p.aud[1]); pl.appendChild(li); });
+  $("json").value = JSON.stringify(Object.assign({ name: $("saveName").value || MODEL.STAGES[state.stage - 1].name }, state.cfg), null, 2);
+  $("pipLabel").textContent = result.abilities.video.ok ? "ROBOT CAMERA · LIVE" : "ROBOT CAMERA · NO VIDEO ON PICO W";
+  if (rebuild) buildRobot();
+  renderMissions();
+}
+function isCustom() { return JSON.stringify(state.cfg) !== JSON.stringify(MODEL.STAGES[state.stage - 1].config); }
+
+document.querySelectorAll(".left select, .left input").forEach(function (el) {
+  el.addEventListener("input", function () { updateOutputs(); formToCfg(); refresh(true); });
+});
+
+/* ---------------- Three.js world ---------------- */
+var canvas = $("view"), box = $("stagebox");
+var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.shadowMap.enabled = true;
+var scene = new THREE.Scene();
+var camera = new THREE.PerspectiveCamera(45, 1.6, 0.005, 30);
+var robotCam = new THREE.PerspectiveCamera(70, 4 / 3, 0.005, 10);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f96, 0.75));
+var sun = new THREE.DirectionalLight(0xffffff, 0.75); sun.position.set(1.2, 2.5, 0.8); sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048); var sc = sun.shadow.camera; sc.left = -1.6; sc.right = 1.6; sc.top = 1.6; sc.bottom = -1.6; sc.near = 0.5; sc.far = 6;
+scene.add(sun);
+
+function themeColors() {
+  var cs = getComputedStyle(document.documentElement);
+  return { room: cs.getPropertyValue("--room").trim() || "#dfe4e8", dark: matchMedia("(prefers-color-scheme: dark)").matches && document.documentElement.dataset.theme !== "light" || document.documentElement.dataset.theme === "dark" };
+}
+var floorMat = new THREE.MeshStandardMaterial({ color: 0xcfd5da, roughness: 0.95 });
+function applyTheme() {
+  var t = themeColors();
+  scene.background = new THREE.Color(t.room);
+  floorMat.color.set(t.dark ? 0x2a333b : 0xd3d8dc);
+}
+
+// Room: 2 m x 2 m. x right, z towards viewer, y up. Units are metres.
+var ROOM = 1.0;
+var floor = new THREE.Mesh(new THREE.PlaneGeometry(2 * ROOM, 2 * ROOM), floorMat);
+floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true; scene.add(floor);
+var grid = new THREE.GridHelper(2 * ROOM, 20, 0x8a96a0, 0x8a96a0); grid.material.opacity = 0.25; grid.material.transparent = true; grid.position.y = 0.0005; scene.add(grid);
+
+var walls = [], obstacles = [];  // obstacles: {minX,maxX,minZ,maxZ,h,mesh}
+function addBox(w, h, d, x, z, color, isStep) {
+  var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color: color, roughness: 0.8 }));
+  m.position.set(x, h / 2, z); m.castShadow = true; m.receiveShadow = true; scene.add(m);
+  var o = { minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2, h: h, mesh: m, step: !!isStep };
+  obstacles.push(o); return o;
+}
+[[2 * ROOM + 0.04, 0.12, 0.02, 0, -ROOM - 0.01], [2 * ROOM + 0.04, 0.12, 0.02, 0, ROOM + 0.01], [0.02, 0.12, 2 * ROOM, -ROOM - 0.01, 0], [0.02, 0.12, 2 * ROOM, ROOM + 0.01, 0]]
+  .forEach(function (a) { walls.push(addBox(a[0], a[1], a[2], a[3], a[4], 0x7b8590)); });
+addBox(0.18, 0.12, 0.18, -0.25, -0.15, 0x5f6b77);   // crate
+addBox(0.10, 0.20, 0.30, 0.35, 0.25, 0x5f6b77);     // shelf end
+var stepArea = addBox(0.5, 0.02, 0.4, 0.62, -0.68, 0xa3adb6, true); // 20 mm step
+
+function label(text, color) {
+  var c = document.createElement("canvas"); c.width = 256; c.height = 64; var g = c.getContext("2d");
+  g.fillStyle = color; g.font = "bold 34px sans-serif"; g.textAlign = "center"; g.fillText(text, 128, 44);
+  var s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+  s.scale.set(0.22, 0.055, 1); return s;
+}
+var stepLabel = label("20 mm STEP", "#56616c"); stepLabel.position.set(0.62, 0.08, -0.68); scene.add(stepLabel);
+
+var COLORS = { red: 0xd94436, green: 0x2ea05a, blue: 0x2f6fde };
+var pads = {}, bins = {}, blocks = [];
+// Goal pad
+(function () {
+  var m = new THREE.Mesh(new THREE.CircleGeometry(0.11, 40), new THREE.MeshStandardMaterial({ color: 0x2ea05a, transparent: true, opacity: 0.55 }));
+  m.rotation.x = -Math.PI / 2; m.position.set(-0.7, 0.001, 0.65); scene.add(m); pads.green = { x: -0.7, z: 0.65 };
+  var l = label("GREEN PAD", "#2ea05a"); l.position.set(-0.7, 0.06, 0.65); scene.add(l);
+})();
+function makeBin(color, x, z) {
+  var g = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ color: COLORS[color], roughness: 0.6 });
+  var s = 0.12, h = 0.025, t = 0.006;
+  [[s, h, t, 0, -s / 2], [s, h, t, 0, s / 2], [t, h, s, -s / 2, 0], [t, h, s, s / 2, 0]].forEach(function (a) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(a[0], a[1], a[2]), mat); m.position.set(a[3], h / 2, a[4]); m.castShadow = true; g.add(m);
+  });
+  var base = new THREE.Mesh(new THREE.BoxGeometry(s, 0.003, s), mat); base.position.y = 0.0015; g.add(base);
+  g.position.set(x, 0, z); scene.add(g); bins[color] = { x: x, z: z, size: s };
+}
+makeBin("red", 0.75, 0.75); makeBin("blue", -0.75, -0.75); makeBin("green", 0.0, 0.8);
+
+var BLOCK = 0.03;
+var blockStart = { red: [0.15, -0.4], green: [-0.45, 0.25], blue: [0.55, 0.0] };
+function resetBlocks() {
+  blocks.forEach(function (b) { if (b.mesh.parent) b.mesh.parent.remove(b.mesh); });
+  blocks = [];
+  Object.keys(blockStart).forEach(function (c) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(BLOCK, BLOCK, BLOCK), new THREE.MeshStandardMaterial({ color: COLORS[c], roughness: 0.5 }));
+    m.castShadow = true; m.position.set(blockStart[c][0], BLOCK / 2, blockStart[c][1]); scene.add(m);
+    blocks.push({ color: c, mesh: m, held: false, vy: 0 });
+  });
+}
+resetBlocks();
+
+/* ---------------- Robot ---------------- */
+var robot = { squat: 0, squatTarget: 0, x: -0.5, z: -0.3, yaw: 0.6, v: 0, w: 0, y: 0, tilt: 0, pitch: 0, camTilt: 0, held: null, gait: 0, bump: 0 };
+var R = null;  // built meshes
+var growth = 1;        // 0..1 leg growth animation
+var armPose = { yaw: 0, sh: -1.2, el: 2.2, wr: 0.6, grip: 0 };  // tucked
+var armTarget = null;
+
+var mat = {
+  orange: new THREE.MeshStandardMaterial({ color: 0xf26b1d, roughness: 0.45 }),
+  dark: new THREE.MeshStandardMaterial({ color: 0x23282e, roughness: 0.6 }),
+  black: new THREE.MeshStandardMaterial({ color: 0x111417, roughness: 0.8 }),
+  tyre: new THREE.MeshStandardMaterial({ color: 0x15181b, roughness: 0.9 }),
+  hub: new THREE.MeshStandardMaterial({ color: 0xf26b1d, roughness: 0.5 }),
+  led: new THREE.MeshStandardMaterial({ color: 0x2f8cff, emissive: 0x2f8cff, emissiveIntensity: 0.9 }),
+  glass: new THREE.MeshStandardMaterial({ color: 0x0b0f14, roughness: 0.1, metalness: 0.4 })
+};
+
+var faceCanvas = document.createElement("canvas"); faceCanvas.width = 256; faceCanvas.height = 160;
+var faceTex = new THREE.CanvasTexture(faceCanvas);
+var face = { mood: "normal", blink: 0, nextBlink: 2, lookX: 0 };
+function drawFace(t) {
+  var g = faceCanvas.getContext("2d"), W = 256, H = 160;
+  g.fillStyle = "#06090d"; g.fillRect(0, 0, W, H);
+  var open = face.blink > 0 ? 0.12 : 1, mood = face.mood;
+  var eh = 70 * open, ew = 38, cy = 78, lx = face.lookX * 14;
+  g.fillStyle = mood === "sad" ? "#5e8cff" : mood === "happy" ? "#4fd1ff" : mood === "surprised" ? "#9fe3ff" : "#3aa0ff";
+  g.shadowColor = g.fillStyle; g.shadowBlur = 18;
+  [-1, 1].forEach(function (s) {
+    var cx = W / 2 + s * 52 + lx, h = mood === "sleepy" ? 12 : mood === "surprised" ? eh * 1.1 : eh;
+    var w = mood === "surprised" ? ew * 1.15 : ew;
+    if (mood === "happy" && open > 0.5) {
+      g.beginPath(); g.lineWidth = 14; g.strokeStyle = g.fillStyle; g.lineCap = "round";
+      g.arc(cx, cy + 14, 24, Math.PI * 1.1, Math.PI * 1.9); g.stroke();
+    } else {
+      var r = Math.min(w, h) / 2; g.beginPath();
+      if (g.roundRect) g.roundRect(cx - w / 2, cy - h / 2, w, h, r); else g.rect(cx - w / 2, cy - h / 2, w, h);
+      g.fill();
+    }
+    if (mood === "sad") { g.fillStyle = "#06090d"; g.beginPath(); g.moveTo(cx - 30, cy - 50); g.lineTo(cx + 30, cy - 50); g.lineTo(cx + s * -30, cy - 18); g.fill(); g.fillStyle = "#5e8cff"; }
+  });
+  g.shadowBlur = 0; faceTex.needsUpdate = true;
+}
+
+function roundedBoxGeom(w, h, d, r) {
+  var s = new THREE.Shape(), x = -w / 2, y = -d / 2;
+  s.moveTo(x + r, y); s.lineTo(x + w - r, y); s.quadraticCurveTo(x + w, y, x + w, y + r);
+  s.lineTo(x + w, y + d - r); s.quadraticCurveTo(x + w, y + d, x + w - r, y + d);
+  s.lineTo(x + r, y + d); s.quadraticCurveTo(x, y + d, x, y + d - r);
+  s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
+  var bev = Math.min(r * 0.5, h * 0.12);
+  var geo = new THREE.ExtrudeGeometry(s, { depth: h - 2 * bev, bevelEnabled: true, bevelThickness: bev, bevelSize: bev * 0.8, bevelSegments: 3, curveSegments: 10 });
+  geo.rotateX(-Math.PI / 2); geo.translate(0, bev, 0);
+  return geo;
+}
+function cyl(r, len, m, seg) { var c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg || 20), m); c.castShadow = true; return c; }
+function boxm(w, h, d, m) { var b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.castShadow = true; return b; }
+
+function buildRobot() {
+  if (R) scene.remove(R.root);
+  if (robot.held && !state.cfg.arm) {
+    var hb = robot.held; robot.held = null; hb.held = false; if (hb.mesh.parent) hb.mesh.parent.remove(hb.mesh);
+    scene.add(hb.mesh); hb.mesh.position.set(robot.x, 0.1, robot.z); hb.mesh.rotation.set(0, 0, 0); hb.vy = 0;
+  }
+  var c = state.cfg, geo = result.geometry;
+  var w = c.body_mm * MM, h = c.height_mm * MM;
+  var root = new THREE.Group(), body = new THREE.Group(); root.add(body);
+  R = { root: root, body: body, wheels: [], legs: [], tracks: [] };
+
+  // Shell: black skirt, orange middle, dark cap
+  var skirt = new THREE.Mesh(roundedBoxGeom(w * 0.98, h * 0.18, w * 0.98, w * 0.2), mat.black); skirt.castShadow = true; body.add(skirt);
+  var mid = new THREE.Mesh(roundedBoxGeom(w, h * 0.62, w, w * 0.22), mat.orange); mid.position.y = h * 0.16; mid.castShadow = true; body.add(mid);
+  var cap = new THREE.Mesh(roundedBoxGeom(w * 0.97, h * 0.22, w * 0.97, w * 0.21), mat.dark); cap.position.y = h * 0.78; cap.castShadow = true; body.add(cap);
+  var led = boxm(w * 0.42, h * 0.035, 0.002, mat.led); led.position.set(0, h * 0.74, w / 2 + 0.001); body.add(led);
+  // Face screen on the front (+x is forward after rotation; build facing +z then rotate group)
+  var bezel = boxm(w * 0.52, h * 0.36, 0.006, mat.black); bezel.position.set(0, h * 0.44, w / 2 + 0.002); body.add(bezel);
+  var screen = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.46, h * 0.29), new THREE.MeshBasicMaterial({ map: faceTex }));
+  screen.position.set(0, h * 0.44, w / 2 + 0.0055); body.add(screen);
+  // Side slots
+  [-1, 1].forEach(function (s) { var sl = boxm(0.003, h * 0.16, w * 0.06, mat.black); sl.position.set(s * (w / 2 + 0.001), h * 0.45, w * 0.25); body.add(sl); });
+
+  // Spiral camera mount: stacked rings, then a tilt servo and camera
+  var mast = c.mast_mm * MM, rings = 4, ringR = w * 0.3;
+  for (var i = 0; i < rings; i++) {
+    var rr = ringR * (1 - i * 0.18);
+    var ring = new THREE.Mesh(new THREE.TorusGeometry(rr, Math.max(0.003, w * 0.025), 8, 36), mat.dark);
+    ring.rotation.x = Math.PI / 2; ring.position.y = h + 0.002 + i * (mast / rings); ring.castShadow = true; body.add(ring);
+  }
+  var post = cyl(w * 0.05, mast, mat.dark); post.position.y = h + mast / 2; body.add(post);
+  var camPivot = new THREE.Group(); camPivot.position.y = h + mast + 0.006; body.add(camPivot);
+  var camBody = boxm(w * 0.2, w * 0.17, w * 0.17, mat.black); camBody.position.y = w * 0.085; camPivot.add(camBody);
+  var lens = cyl(w * 0.055, 0.006, mat.glass); lens.rotation.x = Math.PI / 2; lens.position.set(0, w * 0.085, w * 0.088); camPivot.add(lens);
+  var camAnchor = new THREE.Object3D(); camAnchor.position.set(0, w * 0.085, w * 0.1); camPivot.add(camAnchor);
+  R.camPivot = camPivot; R.camAnchor = camAnchor;
+
+  // Locomotion
+  var wr = c.wheel_mm / 2 * MM;
+  if (c.locomotion === "wheels" || c.locomotion === "tracks") {
+    [[-1, -1], [-1, 1], [1, -1], [1, 1]].forEach(function (p) {
+      var wg = new THREE.Group();
+      var tyre = cyl(wr, wr * 0.9, mat.tyre, 24); tyre.rotation.z = Math.PI / 2; wg.add(tyre);
+      var hub = cyl(wr * 0.55, wr * 0.95, mat.hub, 6); hub.rotation.z = Math.PI / 2; wg.add(hub);
+      wg.position.set(p[0] * (w / 2 - wr * 0.45), wr - geo.body_bottom * MM, p[1] * (w * 0.34));
+      body.add(wg); R.wheels.push(wg);
+    });
+    if (c.locomotion === "tracks") {
+      [-1, 1].forEach(function (s) {
+        var tg = new THREE.Group(), len = w * 0.68 + 2 * wr * 1.05, th = wr * 2.15;
+        var belt = boxm(wr * 1.0, th, w * 0.68, mat.tyre); tg.add(belt);
+        [-1, 1].forEach(function (e) { var end = cyl(th / 2, wr * 1.0, mat.tyre, 20); end.rotation.z = Math.PI / 2; end.position.z = e * w * 0.34; tg.add(end); });
+        for (var k = 0; k < 14; k++) { var lug = boxm(wr * 1.05, 0.0025, 0.004, mat.dark); lug.userData.k = k; tg.add(lug); R.tracks.push({ lug: lug, len: len, th: th, w: w }); }
+        var panel = new THREE.Mesh(roundedBoxGeom(0.004, th * 0.8, w * 0.7, 0.003), mat.orange);
+        panel.rotation.z = Math.PI / 2; panel.position.set(s * wr * 0.52, 0, 0); tg.add(panel);
+        tg.position.set(s * (w / 2 + wr * 0.35), wr - geo.body_bottom * MM, 0); body.add(tg);
+      });
+      R.wheels.forEach(function (wg) { wg.visible = false; });
+    }
+  } else if (duck.state === "ready") {
+    // The real Open Duck Mini legs, playing its recorded gait. The robot's shell replaces the duck's
+    // own body, so the hip motors sit inside the shell.
+    R.duck = makeDuck(duck.data, ["leg"]);
+    root.add(R.duck.group);
+  } else {
+    if (duck.state === "idle" || duck.state === "loading") loadDuck().then(function () { if (state.cfg.locomotion === "legs") buildRobot(); }, function () {});
+    // Duck-style biped stand-in until the Open Duck model loads: hip yaw/roll/pitch, knee, ankle.
+    [-1, 1].forEach(function (s) {
+      var hip = new THREE.Group(); hip.position.set(s * geo.hip_spread * MM, 0, 0);
+      var hipBlock = boxm(w * 0.16, w * 0.12, w * 0.2, mat.dark); hipBlock.position.y = -w * 0.03; hip.add(hipBlock);
+      var thigh = new THREE.Group(); thigh.position.y = -w * 0.06; hip.add(thigh);
+      var tl = geo.thigh * MM, sl = geo.shin * MM;
+      var thighM = boxm(w * 0.1, tl, w * 0.13, mat.orange); thighM.position.y = -tl / 2; thigh.add(thighM);
+      var knee = new THREE.Group(); knee.position.y = -tl; thigh.add(knee);
+      var kneeM = cyl(w * 0.07, w * 0.14, mat.dark); kneeM.rotation.z = Math.PI / 2; knee.add(kneeM);
+      var shinM = boxm(w * 0.085, sl, w * 0.1, mat.dark); shinM.position.y = -sl / 2; knee.add(shinM);
+      var ankle = new THREE.Group(); ankle.position.y = -sl; knee.add(ankle);
+      var fl = geo.foot_len * MM;
+      var foot = boxm(w * 0.2, 0.008, fl, mat.orange); foot.position.set(0, -0.004, fl * 0.18); ankle.add(foot);
+      body.add(hip);
+      R.legs.push({ side: s, hip: hip, thigh: thigh, knee: knee, ankle: ankle, tl: tl, sl: sl });
+    });
+  }
+
+  // Arm on the front right of the cap
+  if (c.arm) {
+    var armBase = new THREE.Group(); armBase.position.set(w * 0.32, h * 0.82, geo.arm_mount_x * MM); body.add(armBase);
+    var baseM = cyl(w * 0.07, w * 0.06, mat.dark); armBase.add(baseM);
+    var shoulder = new THREE.Group(); shoulder.position.y = w * 0.05; armBase.add(shoulder);
+    var L1 = c.arm_mm[0] * MM, L2 = c.arm_mm[1] * MM, aw = Math.max(0.012, w * 0.09);
+    var up = boxm(aw, L1, aw, mat.orange); up.position.y = L1 / 2; shoulder.add(up);
+    var elbow = new THREE.Group(); elbow.position.y = L1; shoulder.add(elbow);
+    var elM = cyl(aw * 0.6, aw * 1.15, mat.dark); elM.rotation.z = Math.PI / 2; elbow.add(elM);
+    var fore = boxm(aw * 0.85, L2, aw * 0.85, mat.dark); fore.position.y = L2 / 2; elbow.add(fore);
+    var wrist = new THREE.Group(); wrist.position.y = L2; elbow.add(wrist);
+    var hand = buildHand(c.hand, result.geometry.hand_len * MM, aw);
+    wrist.add(hand.group);
+    R.arm = { base: armBase, shoulder: shoulder, elbow: elbow, wrist: wrist, hand: hand, L1: L1, L2: L2, hl: result.geometry.hand_len * MM };
+  }
+
+  root.traverse(function (o) { if (o.isMesh) o.castShadow = true; });
+  scene.add(root);
+  R.h = h; R.w = w;
+}
+
+function buildHand(type, len, aw) {
+  if (type === "amazing_hand") {
+    if (pollen.state === "ready") { var ph = makePollenHand(pollen.data); return { group: ph.group, fingers: [], pollen: ph }; }
+    if (pollen.state === "idle" || pollen.state === "loading") loadPollenHand().then(function () { if (state.cfg.hand === "amazing_hand") buildRobot(); }, function () {});
+  }
+  var g = new THREE.Group(), fingers = [];
+  if (type === "gripper2") {
+    var palm = boxm(aw * 1.4, len * 0.35, aw * 0.9, mat.black); palm.position.y = len * 0.17; g.add(palm);
+    [-1, 1].forEach(function (s) {
+      var f = new THREE.Group(); f.position.set(s * aw * 0.55, len * 0.35, 0);
+      var seg = boxm(aw * 0.22, len * 0.65, aw * 0.6, mat.orange); seg.position.y = len * 0.32; f.add(seg);
+      g.add(f); fingers.push({ g: f, side: s, kind: "jaw", spread: aw * 0.55 });
+    });
+  } else {
+    var n = type === "amazing_hand" ? 4 : 3;
+    var palmW = aw * (n === 4 ? 2.2 : 1.7);
+    var palm2 = boxm(palmW, len * 0.42, aw * 0.6, mat.orange); palm2.position.y = len * 0.21; g.add(palm2);
+    for (var i = 0; i < n; i++) {
+      var x = (i - (n - 1) / 2) * palmW / n;
+      var f1 = new THREE.Group(); f1.position.set(x, len * 0.42, 0);
+      var s1 = boxm(palmW / n * 0.75, len * 0.3, aw * 0.45, mat.dark); s1.position.y = len * 0.15; f1.add(s1);
+      var f2 = new THREE.Group(); f2.position.y = len * 0.3; f1.add(f2);
+      var s2 = boxm(palmW / n * 0.7, len * 0.26, aw * 0.42, mat.dark); s2.position.y = len * 0.13; f2.add(s2);
+      g.add(f1); fingers.push({ g: f1, g2: f2, kind: "finger" });
+    }
+    // thumb opposite the fingers
+    var th = new THREE.Group(); th.position.set(-palmW / 2, len * 0.15, 0);
+    var ts = boxm(aw * 0.35, len * 0.35, aw * 0.4, mat.dark); ts.position.y = len * 0.17; th.add(ts);
+    g.add(th); fingers.push({ g: th, kind: "thumb" });
+  }
+  return { group: g, fingers: fingers };
+}
+
+/* ---------------- Recorded 3D models (Pollen hand, Open Duck) ---------------- */
+// <name>.json describes the parts; <name>.b64.txt holds meshes and recorded frames
+// (see sim/export_pollen_hand.py and sim/export_open_duck.py).
+function loadPack(name, slot) {
+  if (slot.promise) return slot.promise;
+  slot.state = "loading";
+  var get = function (url, kind) { return fetch(url).then(function (r) { if (!r.ok) throw new Error(url + " " + r.status); return r[kind](); }); };
+  slot.promise = Promise.all([get(name + ".json", "json"), get(name + ".b64.txt", "text")]).then(function (res) {
+    var meta = res[0], raw = atob(res[1].trim()), bytes = new Uint8Array(raw.length);
+    for (var j = 0; j < raw.length; j++) bytes[j] = raw.charCodeAt(j);
+    var buf = bytes.buffer;
+    var V = new Float32Array(buf, 0, meta.verts_bytes / 4), I = new Uint16Array(buf, meta.verts_bytes, meta.index_bytes / 2);
+    var geos = meta.meshes.map(function (m) {
+      var g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.BufferAttribute(V.subarray(m.vert_offset * 3, (m.vert_offset + m.vert_count) * 3), 3));
+      g.setIndex(new THREE.BufferAttribute(I.subarray(m.index_offset, m.index_offset + m.index_count), 1));
+      g.computeVertexNormals();
+      return g;
+    });
+    var mats = {};
+    slot.data = { meta: meta, geos: geos, frames: new Float32Array(buf, meta.frames_offset),
+      mat: function (rgb) { var k = rgb.join(); return mats[k] || (mats[k] = new THREE.MeshStandardMaterial({ color: new THREE.Color(rgb[0], rgb[1], rgb[2]), roughness: 0.55, metalness: 0.05 })); } };
+    slot.state = "ready";
+    return slot.data;
+  }).catch(function (e) { slot.state = "failed"; slot.error = e; throw e; });
+  return slot.promise;
+}
+
+/* ---------------- Pollen Robotics Amazing Hand ---------------- */
+// For each named pose, frames recorded from Pollen's model going from fully open (t = 0) to the pose (t = 1).
+var pollen = { state: "idle", data: null, promise: null };
+function loadPollenHand() { return loadPack("pollen_hand", pollen); }
+var _q0 = new THREE.Quaternion(), _q1 = new THREE.Quaternion();
+function makePollenHand(d) {
+  // Pollen's frame has the fingers along +z; turn it so they run along +y like the other hands.
+  var outer = new THREE.Group(), inner = new THREE.Group(); inner.rotation.x = -Math.PI / 2; outer.add(inner);
+  var parts = d.meta.geoms.map(function (gm) { var m = new THREE.Mesh(d.geos[gm.mesh], d.mat(gm.rgb)); m.castShadow = true; inner.add(m); return m; });
+  var hand = { group: outer, parts: parts, set: function (pose, t) {
+    var P = Math.max(0, d.meta.poses.indexOf(pose)), nF = d.meta.frames_per_pose, nG = parts.length, F = d.frames;
+    t = Math.max(0, Math.min(1, t));
+    var x = t * (nF - 1), k = Math.min(nF - 2, Math.floor(x)), a = x - k;
+    var b0 = (P * nF + k) * nG * 7, b1 = (P * nF + k + 1) * nG * 7;
+    for (var i = 0; i < nG; i++) {
+      var o0 = b0 + i * 7, o1 = b1 + i * 7, m = parts[i];
+      m.position.set(F[o0] + (F[o1] - F[o0]) * a, F[o0 + 1] + (F[o1 + 1] - F[o0 + 1]) * a, F[o0 + 2] + (F[o1 + 2] - F[o0 + 2]) * a);
+      _q0.set(F[o0 + 4], F[o0 + 5], F[o0 + 6], F[o0 + 3]); _q1.set(F[o1 + 4], F[o1 + 5], F[o1 + 6], F[o1 + 3]);
+      m.quaternion.copy(_q0).slerp(_q1, a);
+    }
+  } };
+  hand.set("open", 0);
+  return hand;
+}
+// Servo angles (degrees) for a pose part-way between open and the named pose, as Pollen's demo would send them.
+function pollenServos(pose, t) {
+  var deg = pollen.data.meta.servo_degrees, o = deg.open, p = deg[pose] || o;
+  return p.map(function (a, i) { return [o[i][0] + (a[0] - o[i][0]) * t, o[i][1] + (a[1] - o[i][1]) * t]; });
+}
+// One named pose shared by the robot's hand (when it is the Amazing Hand) and the hand lab.
+// Switching between two poses goes back through open, the way the real servos would.
+var handPose = { name: "close", t: 0, target: 0, active: false, next: null };
+function setHandPose(name) {
+  handPose.next = null;
+  if (name === "open") { handPose.target = 0; }
+  else if (handPose.name === name || handPose.t < 0.02) { handPose.name = name; handPose.target = 1; }
+  else { handPose.next = name; handPose.target = 0; }
+  handPose.active = true;
+  updatePoseButtons();
+}
+
+/* ---------------- Open Duck Mini legs ---------------- */
+// Looping gait clips (stand, forward, backward, left, right) recorded while the Open Duck's own
+// trained walking policy drove it in MuJoCo. Poses are relative to the duck's heading.
+var duck = { state: "idle", data: null, promise: null };
+function loadDuck() { return loadPack("open_duck", duck); }
+// Duck frame is x forward, y left, z up; the sandbox robot is z forward, x left, y up.
+var DUCK_BASIS = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, 1), new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0));
+var DUCK_Q = new THREE.Quaternion().setFromRotationMatrix(DUCK_BASIS), DUCK_QI = DUCK_Q.clone().invert();
+var _v0 = new THREE.Vector3(), _v1 = new THREE.Vector3(), _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion();
+function makeDuck(d, include) {
+  var outer = new THREE.Group(), inner = new THREE.Group(); inner.quaternion.copy(DUCK_Q); outer.add(inner);
+  var parts = [], meta = d.meta, nG = meta.geoms.length, nF = meta.frames_per_clip, F = d.frames;
+  meta.geoms.forEach(function (gm, i) {
+    if (include.indexOf(gm.part) < 0) return;
+    var m = new THREE.Mesh(d.geos[gm.mesh], d.mat(gm.rgb)); m.castShadow = true; inner.add(m); parts.push({ mesh: m, i: i });
+  });
+  var trunkRef = meta.geoms.findIndex(function (gm) { return gm.part === "trunk"; });
+  function pose(clip, frame, i, pos, quat) {
+    var c = Math.max(0, meta.clips.indexOf(clip)), f = ((frame % nF) + nF) % nF, k = Math.floor(f), a = f - k, k1 = (k + 1) % nF;
+    var o0 = ((c * nF + k) * nG + i) * 7, o1 = ((c * nF + k1) * nG + i) * 7;
+    pos.set(F[o0] + (F[o1] - F[o0]) * a, F[o0 + 1] + (F[o1 + 1] - F[o0 + 1]) * a, F[o0 + 2] + (F[o1 + 2] - F[o0 + 2]) * a);
+    _qa.set(F[o0 + 4], F[o0 + 5], F[o0 + 6], F[o0 + 3]); _qb.set(F[o1 + 4], F[o1 + 5], F[o1 + 6], F[o1 + 3]);
+    quat.copy(_qa).slerp(_qb, a);
+  }
+  var refPos = new THREE.Vector3(), refQuat = new THREE.Quaternion();
+  pose("stand", 0, trunkRef, refPos, refQuat);
+  var top = Infinity;
+  meta.geoms.forEach(function (gm, i) {   // underside of the duck's body when standing: the robot's shell takes its place there
+    if (gm.part !== "trunk") return;
+    var g = d.geos[gm.mesh]; if (!g.boundingBox) g.computeBoundingBox();
+    pose("stand", 0, i, _v0, _qa);
+    var bb = g.boundingBox.clone().applyMatrix4(new THREE.Matrix4().compose(_v0, _qa, new THREE.Vector3(1, 1, 1)));
+    top = Math.min(top, bb.min.z);
+  });
+  var duckObj = { group: outer, top: top, trunkPos: new THREE.Vector3(), trunkQuat: new THREE.Quaternion(),
+    // Blend clip A at frame fa with clip B at frame fb (w = weight of B); also returns how the trunk moved.
+    set: function (ca, fa, cb, fb, w) {
+      parts.forEach(function (p) {
+        pose(ca, fa, p.i, p.mesh.position, p.mesh.quaternion);
+        if (w > 0) { pose(cb, fb, p.i, _v1, _qb); p.mesh.position.lerp(_v1, w); p.mesh.quaternion.slerp(_qb, w); }
+      });
+      pose(ca, fa, trunkRef, _v0, _qa);
+      if (w > 0) { pose(cb, fb, trunkRef, _v1, _qb); _v0.lerp(_v1, w); _qa.slerp(_qb, w); }
+      // trunk motion relative to standing, turned into the sandbox's axes
+      this.trunkPos.copy(_v0).sub(refPos).applyQuaternion(DUCK_Q);
+      this.trunkQuat.copy(DUCK_Q).multiply(_qa).multiply(refQuat.clone().invert()).multiply(DUCK_QI);
+    } };
+  duckObj.set("stand", 0, "stand", 0, 0);
+  return duckObj;
+}
+// Gait state shared by the robot's legs and the walk lab: which clip is playing and where in it.
+function gaitClip(v, w) {
+  if (Math.abs(w) > 0.25) return w > 0 ? "left" : "right";
+  if (v > 0.01) return "forward";
+  if (v < -0.01) return "backward";
+  return "stand";
+}
+function newGait() { return { clip: "stand", frame: 0, prev: null, prevFrame: 0, blend: 0 }; }
+function advanceGait(g, clip, dt, fps) {
+  if (clip !== g.clip) { g.prev = g.clip; g.prevFrame = g.frame; g.clip = clip; g.blend = 1; }
+  g.frame += dt * fps; g.prevFrame += dt * fps;
+  if (g.blend > 0) g.blend = Math.max(0, g.blend - dt * 4);
+}
+function applyGait(obj, g) { obj.set(g.clip, g.frame, g.prev || g.clip, g.prevFrame, g.blend); }
+var robotGait = newGait();
+
+/* ---------------- Simulation ---------------- */
+var keys = {}, held = { f: 0, b: 0, l: 0, r: 0 };
+var program = null, programWait = 0;
+var autopilot = null;    // {type, ...} high-level behaviour
+var tippedTimer = 0;
+
+// Knee bend of the legs: normal crouch, deeper while squatting to reach the floor.
+var MAX_BEND = 1.1;
+function legBend(squat) {
+  var crouch = result.geometry.crouch_deg * Math.PI / 180;
+  if (!result.abilities.walk.ok) return 0.9;
+  return crouch + (squat === undefined ? robot.squat : squat) * (MAX_BEND - crouch);
+}
+// With Open Duck legs, squatting is shown by lowering the legs up to 35%; the bench (sim/bench.py)
+// checks the knee load of a real squat.
+var DUCK_SQUAT = 0.35;
+function bodyBottom(squat) {
+  if (state.cfg.locomotion !== "legs") return result.geometry.body_bottom * MM;
+  if (R && R.duck) return R.duck.top * (0.25 + 0.75 * growth) * (1 - DUCK_SQUAT * (squat === undefined ? robot.squat : squat));
+  var g = result.geometry, legScale = 0.25 + 0.75 * growth;
+  return (g.thigh + g.shin) * MM * legScale * Math.cos(legBend(squat)) + state.cfg.body_mm * MM * 0.06 + 0.008;
+}
+function footprintR() { return state.cfg.body_mm * MM * 0.62; }
+function groundAt(x, z) {
+  var gy = 0;
+  obstacles.forEach(function (o) { if (o.step && x > o.minX && x < o.maxX && z > o.minZ && z < o.maxZ) gy = Math.max(gy, o.h); });
+  return gy;
+}
+// How far a robot of radius r at (x, z) overlaps the obstacles (0 when clear).
+function penetration(x, z, r) {
+  var worst = 0;
+  for (var i = 0; i < obstacles.length; i++) {
+    var o = obstacles[i];
+    if (o.step && o.h * 1000 <= result.step_mm && canMove()) continue;
+    var cx = Math.max(o.minX, Math.min(x, o.maxX)), cz = Math.max(o.minZ, Math.min(z, o.maxZ));
+    var d = Math.hypot(x - cx, z - cz);
+    if (x > o.minX && x < o.maxX && z > o.minZ && z < o.maxZ) d = 0;
+    if (d < r) worst = Math.max(worst, r - d);
+  }
+  return worst;
+}
+// A move is allowed if it stays clear or reduces the overlap (so a robot that grew into a crate can back out).
+function blocked(x, z, nx, nz, r) { var p = penetration(nx, nz, r); return p > 0 && p >= penetration(x, z, r) - 1e-6; }
+function canMove() { return state.cfg.locomotion === "legs" ? result.abilities.walk.ok : result.abilities.drive.ok; }
+function forwardVec() { return { x: Math.sin(robot.yaw), z: Math.cos(robot.yaw) }; }
+
+// Time-of-flight sensor: distance to the nearest obstacle straight ahead.
+function tofDistance() {
+  var f = forwardVec(), start = footprintR() * 0.75;
+  for (var d = 0; d < 0.6; d += 0.005) {
+    var x = robot.x + f.x * (start + d), z = robot.z + f.z * (start + d);
+    for (var i = 0; i < obstacles.length; i++) {
+      var o = obstacles[i];
+      if (o.step && o.h * 1000 <= result.step_mm) continue;
+      if (x > o.minX && x < o.maxX && z > o.minZ && z < o.maxZ) return d;
+    }
+  }
+  return Infinity;
+}
+
+function step(dt) {
+  var cfg = state.cfg, maxV = result.speed_mps, ok = canMove();
+  if (growth < 1) growth = Math.min(1, growth + dt * 0.5);
+  // Manual drive input
+  var fwd = (keys.KeyW || keys.ArrowUp || held.f ? 1 : 0) - (keys.KeyS || keys.ArrowDown || held.b ? 1 : 0);
+  var turn = (keys.KeyA || keys.ArrowLeft || held.l ? 1 : 0) - (keys.KeyD || keys.ArrowRight || held.r ? 1 : 0);
+  var manual = fwd !== 0 || turn !== 0;
+  if (manual && (autopilot || program)) { autopilot = null; program = null; logLine("bot", "Manual control. Task cancelled."); }
+  var maxW = 2.2;
+  if (cfg.locomotion === "legs" && R && R.duck) {   // the Open Duck's measured gait speeds
+    var mo = duck.data.meta.motion; maxV = mo.forward.forward_mps; maxW = Math.abs(mo.left.turn_radps);
+  }
+  var cmdV = fwd * maxV, cmdW = turn * maxW;
+  if (autopilot) { var a = runAutopilot(dt); cmdV = a.v * maxV; cmdW = Math.max(-maxW, Math.min(maxW, a.w)); }
+  else if (program) { var p = runProgram(dt); cmdV = p.v * maxV; cmdW = Math.max(-maxW, Math.min(maxW, p.w)); }
+  if (cmdV < 0 && cfg.locomotion === "legs" && R && R.duck) cmdV = Math.max(cmdV, duck.data.meta.motion.backward.forward_mps);
+
+  if (!ok && (cmdV !== 0 || cmdW !== 0)) {
+    if (!robot.warned) { robot.warned = 1; say(cfg.locomotion === "legs" ? "My legs are too weak!" : "My motors are too weak!", false); face.mood = "sad"; }
+    cmdV = 0; cmdW = 0; robot.wobble = 0.6;
+  } else if (cmdV === 0 && cmdW === 0) robot.warned = 0;
+
+  // Obstacle stop, like the real VL53L0X safety rule
+  var dist = tofDistance(); robot.tof = dist;
+  if (cmdV > 0 && dist < 0.05) { cmdV = 0; if (!robot.stopShown) { robot.stopShown = 1; face.mood = "surprised"; setTimeout(function () { if (face.mood === "surprised") face.mood = "normal"; }, 900); } }
+  else robot.stopShown = 0;
+
+  // Smooth acceleration
+  robot.v += (cmdV - robot.v) * Math.min(1, dt * 6);
+  robot.w += (cmdW - robot.w) * Math.min(1, dt * 8);
+  if (tippedTimer > 0) { robot.v = 0; robot.w = 0; }
+  robot.yaw += robot.w * dt;
+  var f = forwardVec(), nx = robot.x + f.x * robot.v * dt, nz = robot.z + f.z * robot.v * dt, r = footprintR() * 0.5;
+  if (!blocked(robot.x, robot.z, nx, robot.z, r)) robot.x = nx; else robot.v *= 0.3;
+  if (!blocked(robot.x, robot.z, robot.x, nz, r)) robot.z = nz; else robot.v *= 0.3;
+  var gy = groundAt(robot.x, robot.z); robot.y += (gy - robot.y) * Math.min(1, dt * 10);
+
+  // Gait phase
+  var moving = Math.abs(robot.v) > 0.003 || Math.abs(robot.w) > 0.05;
+  if (moving) robot.gait += dt * (cfg.locomotion === "legs" ? 7 : 1) * (Math.abs(robot.v) / Math.max(maxV, 0.01) + Math.abs(robot.w) * 0.25 + 0.2);
+  if (cfg.locomotion === "legs") robot.legDist = (robot.legDist || 0) + Math.abs(robot.v) * dt;
+  if (R && R.duck) advanceGait(robotGait, ok && tippedTimer <= 0 ? gaitClip(robot.v, robot.w) : "stand", dt, duck.data.meta.fps);
+  if (robot.wobble > 0) robot.wobble -= dt;
+
+  // Arm targets, squat and the hand
+  robot.squat += (robot.squatTarget - robot.squat) * Math.min(1, dt * 3);
+  handPose.t += Math.max(-dt * 1.2, Math.min(dt * 1.2, handPose.target - handPose.t));
+  if (handPose.next && handPose.t < 0.01) { handPose.name = handPose.next; handPose.next = null; handPose.target = 1; updatePoseButtons(); }
+  runHandDemo(dt);
+  updateArm(dt);
+  // Falling blocks
+  blocks.forEach(function (b) {
+    if (b.held) return;
+    var floorY = groundAt(b.mesh.position.x, b.mesh.position.z) + BLOCK / 2;
+    var inBin = binAt(b.mesh.position.x, b.mesh.position.z); if (inBin) floorY = 0.003 + BLOCK / 2;
+    if (b.mesh.position.y > floorY + 0.0005) { b.vy -= 9.81 * dt; b.mesh.position.y = Math.max(floorY, b.mesh.position.y + b.vy * dt); }
+    else { b.vy = 0; b.mesh.position.y = floorY; }
+  });
+  // Face
+  face.nextBlink -= dt; if (face.nextBlink < 0) { face.blink = 0.12; face.nextBlink = 2 + Math.random() * 3; }
+  if (face.blink > 0) face.blink -= dt;
+  face.lookX += ((robot.w > 0.3 ? -1 : robot.w < -0.3 ? 1 : 0) - face.lookX) * Math.min(1, dt * 5);
+  if (tippedTimer > 0) { tippedTimer -= dt; if (tippedTimer <= 0) { face.mood = "normal"; } }
+  checkMissions();
+}
+
+function binAt(x, z) { for (var k in bins) { var b = bins[k]; if (Math.abs(x - b.x) < b.size / 2 && Math.abs(z - b.z) < b.size / 2) return k; } return null; }
+
+/* Arm kinematics: planar two-link IK in the robot's frame */
+function armBaseWorld(squat) {
+  var c = state.cfg, w = c.body_mm * MM, h = c.height_mm * MM;
+  var lx = w * 0.32, lz = result.geometry.arm_mount_x * MM, f = forwardVec();
+  // local (x right, z forward) -> world; robot faces +z when yaw=0
+  var rx = Math.cos(robot.yaw), rz = -Math.sin(robot.yaw);
+  return { x: robot.x + rx * lx + f.x * lz, z: robot.z + rz * lx + f.z * lz, y: robot.y + bodyBottom(squat) + h * 0.82 + w * 0.05 };
+}
+function solveArm(wx, wy, wz) {
+  if (!R || !R.arm) return null;
+  var b = armBaseWorld(), dx = wx - b.x, dz = wz - b.z, dy = wy - b.y;
+  var yawW = Math.atan2(dx, dz), yaw = yawW - robot.yaw;
+  while (yaw > Math.PI) yaw -= 2 * Math.PI; while (yaw < -Math.PI) yaw += 2 * Math.PI;
+  var horiz = Math.sqrt(dx * dx + dz * dz);
+  // hand points straight down; wrist sits hand-length above the target
+  var L1 = R.arm.L1, L2 = R.arm.L2, wy2 = dy + R.arm.hl;
+  var d = Math.sqrt(horiz * horiz + wy2 * wy2);
+  if (d > L1 + L2 - 0.002 || d < Math.abs(L1 - L2) + 0.002) return null;
+  var cosE = (d * d - L1 * L1 - L2 * L2) / (2 * L1 * L2), el = Math.acos(Math.max(-1, Math.min(1, cosE)));
+  var phi = Math.atan2(wy2, horiz), psi = Math.atan2(L2 * Math.sin(el), L1 + L2 * Math.cos(el));
+  var shUp = phi + psi;           // elbow-up solution, angle from horizontal
+  var sh = Math.PI / 2 - shUp;    // rotation from vertical, forward positive
+  var elRot = el;                 // elbow bends downward
+  var wr = Math.PI - sh - elRot;  // keep the hand vertical (pointing down)
+  return { yaw: yaw, sh: sh, el: elRot, wr: wr, reach: horiz };
+}
+function updateArm(dt) {
+  if (!R || !R.arm) return;
+  var t = armTarget || { yaw: 0, sh: -0.5, el: 2.4, wr: 1.2, grip: armPose.grip };
+  ["yaw", "sh", "el", "wr", "grip"].forEach(function (k) { if (t[k] !== undefined) armPose[k] += (t[k] - armPose[k]) * Math.min(1, dt * 5); });
+}
+function armAt(t) { if (!armTarget) return false; var e = 0; ["yaw", "sh", "el", "wr"].forEach(function (k) { e += Math.abs(armTarget[k] - armPose[k]); }); return e < 0.04; }
+
+/* ---------------- Behaviours: pick, place, go to ---------------- */
+function nearestBlock(color) {
+  var best = null, bd = 1e9;
+  blocks.forEach(function (b) { if (b.held || (color && b.color !== color) || binAt(b.mesh.position.x, b.mesh.position.z)) return;
+    var d = Math.hypot(b.mesh.position.x - robot.x, b.mesh.position.z - robot.z); if (d < bd) { bd = d; best = b; } });
+  return best;
+}
+function startPick(color) {
+  if (!result.abilities.pick.ok) { refuse("pick"); return false; }
+  if (robot.held) { say("My hand is already full.", false); return false; }
+  var b = nearestBlock(color);
+  if (!b) { say(color ? "I can't find a " + color + " block." : "No blocks left to pick up.", false); return false; }
+  autopilot = { type: "pick", block: b, phase: "approach", t: 0 };
+  handPose.active = false; updatePoseButtons();
+  return true;
+}
+function startPlace(color) {
+  if (!robot.held) { say("I'm not holding anything.", false); return false; }
+  var target = color && bins[color] ? bins[color] : null;
+  autopilot = { type: "place", bin: color, target: target, phase: target ? "approach" : "lower", t: 0 };
+  return true;
+}
+function startGoto(color) {
+  var t = color === "pad" || color === "green pad" ? pads.green : bins[color] || (nearestBlock(color) && { x: nearestBlock(color).mesh.position.x, z: nearestBlock(color).mesh.position.z });
+  if (!t) { say("I don't know where that is.", false); return false; }
+  autopilot = { type: "goto", target: t, stopAt: 0.04 };
+  return true;
+}
+function startTidy() {
+  if (!result.abilities.tasks.ok) { refuse("tasks"); return false; }
+  autopilot = { type: "tidy" };
+  say("Tidying up. Every block goes in its own colour bin.", true);
+  return true;
+}
+// Path finding: if a crate is in the way, head for the best corner around it first.
+function segHitsBox(x0, z0, x1, z1, o, pad) {
+  var minX = o.minX - pad, maxX = o.maxX + pad, minZ = o.minZ - pad, maxZ = o.maxZ + pad, t0 = 0, t1 = 1, dx = x1 - x0, dz = z1 - z0;
+  var p = [-dx, dx, -dz, dz], q = [x0 - minX, maxX - x0, z0 - minZ, maxZ - z0];
+  for (var i = 0; i < 4; i++) {
+    if (p[i] === 0) { if (q[i] < 0) return false; continue; }
+    var r = q[i] / p[i];
+    if (p[i] < 0) { if (r > t1) return false; if (r > t0) t0 = r; } else { if (r < t0) return false; if (r < t1) t1 = r; }
+  }
+  return true;
+}
+function solidObstacles() { return obstacles.filter(function (o) { return walls.indexOf(o) < 0 && !(o.step && o.h * 1000 <= result.step_mm && canMove()); }); }
+function pathClear(x0, z0, x1, z1, pad) { return !solidObstacles().some(function (o) { return segHitsBox(x0, z0, x1, z1, o, pad); }); }
+var nav = { wp: null, reached: [] };
+function waypoint(tx, tz) {
+  var pad = footprintR() * 0.5 + 0.02;
+  if (pathClear(robot.x, robot.z, tx, tz, pad * 0.9)) { nav.wp = null; nav.reached = []; return { x: tx, z: tz, direct: true }; }
+  if (nav.wp) {
+    if (Math.hypot(nav.wp.x - robot.x, nav.wp.z - robot.z) > 0.04) return nav.wp;
+    nav.reached.push(nav.wp); nav.wp = null;
+  }
+  var best = null, bd = 1e9, m = pad * 1.25;
+  solidObstacles().forEach(function (o) {
+    [[o.minX - m, o.minZ - m], [o.minX - m, o.maxZ + m], [o.maxX + m, o.minZ - m], [o.maxX + m, o.maxZ + m]].forEach(function (c) {
+      if (Math.abs(c[0]) > ROOM - pad || Math.abs(c[1]) > ROOM - pad) return;
+      if (Math.hypot(c[0] - robot.x, c[1] - robot.z) < 0.04) return;
+      if (nav.reached.some(function (r) { return Math.hypot(r.x - c[0], r.z - c[1]) < 0.03; })) return;
+      if (!pathClear(robot.x, robot.z, c[0], c[1], pad * 0.9)) return;
+      var d = Math.hypot(c[0] - robot.x, c[1] - robot.z) + Math.hypot(tx - c[0], tz - c[1]);
+      if (d < bd) { bd = d; best = { x: c[0], z: c[1], direct: false }; }
+    });
+  });
+  nav.wp = best;
+  return best || { x: tx, z: tz, direct: true };
+}
+// Steer towards a point; returns {v, w, done}
+function steer(tx, tz, stopDist) {
+  var wp = waypoint(tx, tz);
+  if (!wp.direct) { var s = steer2(wp.x, wp.z, 0, true); s.done = false; s.d = 1; return s; }
+  return steer2(tx, tz, stopDist);
+}
+function steer2(tx, tz, stopDist, viaWaypoint) {
+  var dx = tx - robot.x, dz = tz - robot.z, d = Math.hypot(dx, dz);
+  var ang = Math.atan2(dx, dz) - robot.yaw; while (ang > Math.PI) ang -= 2 * Math.PI; while (ang < -Math.PI) ang += 2 * Math.PI;
+  if (d < stopDist) return { v: 0, w: 0, done: Math.abs(ang) < 0.5, ang: ang, d: d };
+  var w = Math.max(-2, Math.min(2, ang * 3));
+  var v = Math.abs(ang) > 0.6 ? 0 : Math.min(1, (d - stopDist) * 6 + 0.25);
+  // simple obstacle sidestep: if blocked ahead, turn
+  if (!viaWaypoint && robot.tof < 0.06 && d > 0.15) { w = 1.6; v = 0; }
+  return { v: v, w: w, done: false, ang: ang, d: d };
+}
+// Plan a reach to height ty: how deep to squat and how far in front of the shoulder the target should be.
+function planReach(ty) {
+  var L = R && R.arm ? R.arm.L1 + R.arm.L2 : 0.1, hl = R && R.arm ? R.arm.hl : 0.03;
+  var squats = state.cfg.locomotion === "legs" ? [0, 0.25, 0.5, 0.75, 1] : [0];
+  for (var i = 0; i < squats.length; i++) {
+    var V = ty + hl - armBaseWorld(squats[i]).y;          // wrist height relative to the shoulder
+    if (Math.abs(V) <= 0.82 * L) return { squat: squats[i], H: Math.max(0.03, Math.sqrt(Math.pow(0.85 * L, 2) - V * V)), ok: true };
+  }
+  return { squat: squats[squats.length - 1], H: 0.03, ok: false };
+}
+var reachPlan = null;
+function reachPoint() { return reachPlan ? reachPlan.H : 0.65 * (R && R.arm ? R.arm.L1 + R.arm.L2 : 0.1); }
+function aimFor(tx, tz) {
+  // Point on the line to the target, at reach distance, with the arm's side offset accounted for.
+  var c = state.cfg, w = c.body_mm * MM, side = w * 0.32, fwd = result.geometry.arm_mount_x * MM + reachPoint();
+  var dx = tx - robot.x, dz = tz - robot.z, d = Math.hypot(dx, dz);
+  var yawNeeded = Math.atan2(dx, dz) - Math.asin(Math.max(-1, Math.min(1, side / Math.max(d, side + 0.001))));
+  return { stand: Math.sqrt(Math.max(0, d * d - side * side)) - fwd, yaw: yawNeeded };
+}
+function runAutopilot(dt) {
+  var a = autopilot, out = { v: 0, w: 0 };
+  a.t = (a.t || 0) + dt;
+  if (tippedTimer > 0) return out;
+  if (a.type === "goto") {
+    var s = steer(a.target.x, a.target.z, a.stopAt);
+    if (s.done || (s.d < a.stopAt + 0.01)) { autopilot = null; say("I'm here.", false); }
+    return s;
+  }
+  if (a.type === "tidy") {
+    if (robot.held) { var col = robot.held.color; autopilot = { type: "place", bin: col, target: bins[col], phase: "approach", t: 0, then: "tidy" }; return out; }
+    var b = nearestBlock(null);
+    if (!b) { autopilot = null; face.mood = "happy"; say("All tidy!", true); return out; }
+    autopilot = { type: "pick", block: b, phase: "approach", t: 0, then: "tidy" }; return out;
+  }
+  if (a.type === "pick" || a.type === "place") {
+    var tx, tz, ty;
+    if (a.type === "pick") { tx = a.block.mesh.position.x; tz = a.block.mesh.position.z; ty = a.block.mesh.position.y + BLOCK * 0.1; }
+    else if (a.target) { tx = a.target.x; tz = a.target.z; ty = 0.003 + BLOCK + 0.02; }
+    if (a.phase === "approach") {
+      if (!a.plan) {
+        a.plan = reachPlan = planReach(ty);
+        if (!a.plan.ok) { autopilot = null; say("My arm is too short to reach that, even when I squat.", false); return out; }
+      }
+      reachPlan = a.plan;
+      var wpA = waypoint(tx, tz);
+      if (!wpA.direct && Math.hypot(tx - robot.x, tz - robot.z) > 0.25) { var sw = steer2(wpA.x, wpA.z, 0, true); return { v: sw.v, w: sw.w }; }
+      var aim = aimFor(tx, tz);
+      var ang = aim.yaw - robot.yaw; while (ang > Math.PI) ang -= 2 * Math.PI; while (ang < -Math.PI) ang += 2 * Math.PI;
+      armTarget = { yaw: 0, sh: -0.5, el: 2.4, wr: 1.2, grip: a.type === "pick" ? 0 : 1 };
+      if (Math.abs(ang) > 0.06) { out.w = Math.max(-2, Math.min(2, ang * 3)); out.v = Math.abs(ang) < 0.5 && aim.stand > 0.05 ? 0.6 : 0; return out; }
+      if (aim.stand > 0.006) { out.v = Math.min(1, aim.stand * 8 + 0.15); out.w = ang * 3; if (robot.tof < 0.06 && aim.stand > 0.1) { out.v = 0; out.w = 1.5; } return out; }
+      if (aim.stand < -0.03) { out.v = -0.4; return out; }
+      robot.squatTarget = a.plan.squat;
+      if (Math.abs(robot.squat - robot.squatTarget) > 0.03) return out;
+      a.phase = "reach"; a.t = 0;
+    }
+    if (a.phase === "reach") {
+      var sol = solveArm(tx, ty + 0.03, tz);
+      if (!sol) {
+        a.tries = (a.tries || 0) + 1;
+        if (a.tries > 90) { autopilot = null; armTarget = null; standUp(); say("I can't reach it from here.", false); return out; }
+        a.phase = "approach"; robot.squatTarget = 0; return { v: -0.3, w: 0 };
+      }
+      sol.grip = a.type === "pick" ? 0 : 1; armTarget = sol;
+      if (armAt() && a.t > 0.3) { a.phase = "lower"; a.t = 0; }
+      return out;
+    }
+    if (a.phase === "lower") {
+      if (!a.target && a.type === "place") { var f = forwardVec(), ab = armBaseWorld(); tx = ab.x + f.x * reachPoint(); tz = ab.z + f.z * reachPoint(); ty = robot.y + 0.005 + BLOCK; }
+      var sol2 = solveArm(tx, ty, tz);
+      if (!sol2) { a.phase = "approach"; return out; }
+      sol2.grip = a.type === "pick" ? 0 : 1; armTarget = sol2;
+      if (armAt() && a.t > 0.3) { a.phase = "grip"; a.t = 0; }
+      return out;
+    }
+    if (a.phase === "grip") {
+      armTarget.grip = a.type === "pick" ? 1 : 0;
+      if (a.t > 0.5) {
+        if (a.type === "pick") {
+          // Reality checks from the design model
+          var tip = result.checks.find(function (k) { return k.id === "tip"; });
+          var sh = result.checks.find(function (k) { return k.id === "shoulder"; });
+          if (sh && sh.status === "fail") { say("Too heavy! My shoulder can't lift it.", false); face.mood = "sad"; autopilot = null; armTarget = null; standUp(); return out; }
+          if (tip && tip.status === "fail") { tippedTimer = 2.5; face.mood = "surprised"; say("Whoa! I tipped over. The arm and block are too heavy for my body.", false); autopilot = null; armTarget = null; standUp(); return out; }
+          a.block.held = true; robot.held = a.block;
+        } else {
+          var bl = robot.held; robot.held = null; bl.held = false;
+          var wp = new THREE.Vector3(); bl.mesh.getWorldPosition(wp); R.arm.hand.group.remove(bl.mesh); scene.add(bl.mesh); bl.mesh.position.copy(wp); bl.mesh.rotation.set(0, 0, 0); bl.vy = 0;
+        }
+        a.phase = "lift"; a.t = 0;
+      }
+      return out;
+    }
+    if (a.phase === "lift") {
+      armTarget = { yaw: 0, sh: -0.5, el: 2.4, wr: 1.2, grip: a.type === "pick" ? 1 : 0 };
+      robot.squatTarget = 0;
+      if (a.t > 0.7) {
+        var then = a.then; autopilot = null;
+        if (a.type === "pick") say("Got the " + a.block.color + " block.", false);
+        else if (a.bin) { var landed = binAt(tx, tz); say(landed ? "Placed in the " + a.bin + " bin." : "Put it down.", false); }
+        if (then === "tidy") autopilot = { type: "tidy" };
+      }
+      return out;
+    }
+  }
+  return out;
+}
+function standUp() { robot.squatTarget = 0; reachPlan = null; }
+function refuse(ab) { var r = result.abilities[ab].reason; say("I can't do that yet. " + r, false); face.mood = "sad"; setTimeout(function () { face.mood = "normal"; }, 1500); }
+
+/* ---------------- Program runner ---------------- */
+$("program").value = "say Hello! I am your robot.\nface happy\nforward 200\nturn 90\nlook 20\nforward 150\nlook 0\nturn -90\ndance\nface normal";
+function parseProgram(text) { return text.split(/\n/).map(function (l) { return l.trim(); }).filter(function (l) { return l && l[0] !== "#"; }); }
+function startProgram() {
+  program = { lines: parseProgram($("program").value), i: 0, cur: null };
+  autopilot = null; logLine("me", "▶ Run program (" + program.lines.length + " lines)");
+}
+function runProgram(dt) {
+  var p = program, out = { v: 0, w: 0 };
+  if (!p.cur) {
+    if (p.i >= p.lines.length) { program = null; logLine("bot", "Program finished."); return out; }
+    var line = p.lines[p.i++], parts = line.split(/\s+/), cmd = parts[0].toLowerCase(), arg = parts.slice(1).join(" ");
+    var n = parseFloat(parts[1]);
+    p.cur = { cmd: cmd, arg: arg, n: n, t: 0, start: { x: robot.x, z: robot.z, yaw: robot.yaw } };
+    logLine("bot", "· " + line);
+    if (cmd === "say") { say(arg, true); p.cur = { cmd: "wait", n: Math.min(3, 0.4 + arg.length * 0.05), t: 0 }; }
+    else if (cmd === "face") { face.mood = arg || "normal"; p.cur = null; }
+    else if (cmd === "hand") { if (!handCommand(arg)) logLine("err", "Hand poses: open, close, spread, clench, point"); p.cur = { cmd: "wait", n: 1.0, t: 0 }; }
+    else if (cmd === "look") { robot.camTilt = Math.max(-45, Math.min(45, n || 0)) * Math.PI / 180; p.cur = { cmd: "wait", n: 0.4, t: 0 }; }
+    else if (cmd === "pick") { if (!startPick(arg || null)) p.cur = null; else p.cur = { cmd: "auto" }; }
+    else if (cmd === "place") { if (!startPlace(arg || null)) p.cur = null; else p.cur = { cmd: "auto" }; }
+    else if (cmd === "goto") { if (!startGoto(arg)) p.cur = null; else p.cur = { cmd: "auto" }; }
+    else if (cmd === "tidy") { if (!startTidy()) p.cur = null; else p.cur = { cmd: "auto" }; }
+    else if (["forward", "back", "turn", "wait", "dance"].indexOf(cmd) < 0) { logLine("err", "Unknown command: " + cmd); p.cur = null; }
+    return out;
+  }
+  var c = p.cur; c.t += dt;
+  if (c.cmd === "auto") { if (!autopilot) p.cur = null; else return runAutopilot(dt); return out; }
+  if (c.cmd === "wait") { if (c.t >= (c.n || 1)) p.cur = null; return out; }
+  if (c.cmd === "forward" || c.cmd === "back") {
+    var dist = Math.hypot(robot.x - c.start.x, robot.z - c.start.z) * 1000;
+    if (dist >= Math.abs(c.n || 0) || c.t > 15 || (c.t > 1 && Math.abs(robot.v) < 0.002)) { p.cur = null; return out; }
+    out.v = c.cmd === "forward" ? 1 : -1; return out;
+  }
+  if (c.cmd === "turn") {
+    var turned = (robot.yaw - c.start.yaw) * 180 / Math.PI, goal = c.n || 0;
+    if (Math.abs(turned - goal) < 2 || c.t > 8) { p.cur = null; return out; }
+    out.w = Math.max(-2, Math.min(2, (goal - turned) * 0.08)); if (Math.abs(out.w) < 0.4) out.w = 0.4 * Math.sign(goal - turned); return out;
+  }
+  if (c.cmd === "dance") {
+    if (c.t > 3) { p.cur = null; return out; }
+    face.mood = "happy"; out.w = Math.sin(c.t * 8) * 2.5; robot.camTilt = Math.sin(c.t * 6) * 0.4;
+    if (R && R.arm) armTarget = { yaw: Math.sin(c.t * 5) * 0.8, sh: -0.2, el: 1.0 + Math.sin(c.t * 7) * 0.5, wr: 0.5, grip: (Math.sin(c.t * 9) > 0 ? 1 : 0) };
+    if (c.t > 2.9) { armTarget = null; robot.camTilt = 0; }
+    return out;
+  }
+  p.cur = null; return out;
+}
+
+/* ---------------- Talk ---------------- */
+var logEl = $("log");
+function logLine(who, text) {
+  var d = document.createElement("div"); d.className = who; d.textContent = (who === "me" ? "you  › " : who === "bot" ? "robot› " : "      ") + text;
+  logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight;
+  while (logEl.children.length > 80) logEl.removeChild(logEl.firstChild);
+}
+var bubbleTimer = 0, audioCtx = null;
+function beep() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.13, 0.26].forEach(function (t, i) {
+      var o = audioCtx.createOscillator(), g = audioCtx.createGain(); o.type = "square"; o.frequency.value = [880, 660, 990][i];
+      g.gain.value = 0.04; o.connect(g); g.connect(audioCtx.destination); o.start(audioCtx.currentTime + t); o.stop(audioCtx.currentTime + t + 0.09);
+    });
+  } catch (e) { /* audio is optional */ }
+}
+function say(text, voiced) {
+  var canTalk = result && result.abilities.talk.ok;
+  var shown = canTalk || !voiced ? text : "Beep boop! (" + text + ")";
+  logLine("bot", shown);
+  var b = $("bubble"); b.textContent = shown; b.hidden = false; bubbleTimer = 2.5 + text.length * 0.04;
+  if (!$("speak").checked) return;
+  if (canTalk && "speechSynthesis" in window) {
+    try { var u = new SpeechSynthesisUtterance(text); u.pitch = 1.5; u.rate = 1.05; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) { /* speech is optional */ }
+  } else if (voiced) beep();
+}
+function hear(text) {
+  var t = text.toLowerCase().trim(), m;
+  logLine("me", text);
+  if (!t) return;
+  var col = (t.match(/\b(red|green|blue)\b/g) || []);
+  if (/\b(tidy|clean)/.test(t)) return startTidy();
+  if ((m = t.match(/(put|place|move|take|carry|bring).*\b(red|green|blue)\b.*\b(in|into|to|on)\b.*\b(red|green|blue)\b/))) {
+    if (!result.abilities.pick.ok) return refuse("pick");
+    if (robot.held && robot.held.color === m[2]) return startPlace(m[4]);
+    if (startPick(m[2])) { autopilot.then = null; var dest = m[4]; var chain = setInterval(function () { if (!autopilot) { clearInterval(chain); if (robot.held) startPlace(dest); } }, 200); }
+    return;
+  }
+  if (/\b(pick|grab|get|lift)\b/.test(t)) return startPick(col[0] || null);
+  if (/\b(drop|place|put)\b/.test(t)) return startPlace(col[0] || null);
+  if (/\b(go|drive|walk) to\b/.test(t)) return startGoto(/pad/.test(t) ? "pad" : col[0]);
+  var hp = t.match(/\b(fist|close your hand|grab hand|spread|clench|point|open your hand|open hand|hand (open|close|spread|clench|point))\b/);
+  if (hp) {
+    var name = /fist|close/.test(hp[0]) ? "close" : /spread/.test(hp[0]) ? "spread" : /clench/.test(hp[0]) ? "clench" : /point/.test(hp[0]) ? "point" : "open";
+    handCommand(name);
+    return say(state.cfg.arm && state.cfg.hand === "amazing_hand" ? "Hand: " + name + "." : "My hand isn't the Amazing Hand, so I'm showing it in the Hand lab.", true);
+  }
+  if (/\bdance\b/.test(t)) { program = { lines: ["dance", "face normal"], i: 0, cur: null }; return; }
+  if (/\b(stop|halt|freeze)\b/.test(t)) { autopilot = null; program = null; armTarget = null; standUp(); say("Stopped.", true); return; }
+  if (/(what can you do|abilities|skills)/.test(t)) {
+    var can = Object.keys(result.abilities).filter(function (k) { return result.abilities[k].ok; }).map(function (k) { return ABILITY_NAMES[k].toLowerCase(); });
+    return say("I can " + can.join(", ").replace(/,([^,]*)$/, " and$1") + ".", true);
+  }
+  if (/(how heavy|weigh|mass)/.test(t)) return say("I weigh " + fmtMass(result.mass_g) + ".", true);
+  if (/(battery|how long)/.test(t)) return say("My battery lasts about " + Math.round(result.runtime_min) + " minutes.", true);
+  if (/(name|who are you)/.test(t)) return say("I'm your robot. Stage " + state.stage + ", the " + MODEL.STAGES[state.stage - 1].name + ".", true);
+  if (/(evolve|grow|upgrade)/.test(t)) { if (state.stage < 5) { setStage(state.stage + 1); } else say("I'm fully evolved. Next I need you to build me for real!", true); return; }
+  if (/\b(hello|hi|hey|g'day)\b/.test(t)) { face.mood = "happy"; setTimeout(function () { face.mood = "normal"; }, 1500); return say("Hello! What should we build today?", true); }
+  if (/\b(happy|sad|sleepy|surprised)\b/.test(t)) { face.mood = t.match(/\b(happy|sad|sleepy|surprised)\b/)[1]; return say("Feeling " + face.mood + ".", true); }
+  say("I don't understand that yet. Try: pick up the blue block, put the red block in the red bin, tidy up, go to the green pad.", true);
+}
+$("talkform").addEventListener("submit", function (e) { e.preventDefault(); var v = $("talk").value; $("talk").value = ""; hear(v); });
+
+/* ---------------- Missions ---------------- */
+var missions = [
+  { id: "drive", name: "Drive to the green pad", need: "drive or walk", done: false, test: function () { return Math.hypot(robot.x - pads.green.x, robot.z - pads.green.z) < 0.1; } },
+  { id: "stop", name: "Let the sensor stop you at a wall", need: "obstacle sensor", done: false, test: function () { return robot.stopShown === 1; } },
+  { id: "climb", name: "Climb onto the 20 mm step", need: "tracks or legs", done: false, test: function () { return robot.y > 0.015; } },
+  { id: "walk", name: "Walk 1 metre on legs", need: "stage 3 legs", done: false, test: function () { return state.cfg.locomotion === "legs" && (robot.legDist || 0) > 1; } },
+  { id: "pick", name: "Pick up any block", need: "arm and hand", done: false, test: function () { return !!robot.held; } },
+  { id: "place", name: "Put the red block in the red bin", need: "arm and hand", done: false, test: function () { return blocks.some(function (b) { return b.color === "red" && !b.held && binAt(b.mesh.position.x, b.mesh.position.z) === "red"; }); } },
+  { id: "talk", name: "Ask: what can you do?", need: "voice", done: false, test: function () { return false; } },
+  { id: "tidy", name: "Say “tidy up” and let it work alone", need: "camera brain and arm", done: false, test: function () { return blocks.every(function (b) { return !b.held && binAt(b.mesh.position.x, b.mesh.position.z) === b.color; }); } }
+];
+var savedMissions = store("robot.missions") || {};
+missions.forEach(function (m) { m.done = !!savedMissions[m.id]; });
+function renderMissions() {
+  var ul = $("missions"); ul.innerHTML = "";
+  missions.forEach(function (m) {
+    var li = document.createElement("li");
+    li.innerHTML = '<span class="tick' + (m.done ? " done" : "") + '">' + (m.done ? "✓" : "") + '</span><span></span><span class="need"></span>';
+    li.children[1].textContent = m.name; li.children[2].textContent = m.need; ul.appendChild(li);
+  });
+}
+function markMission(id) {
+  var m = missions.find(function (x) { return x.id === id; }); if (!m || m.done) return;
+  m.done = true; savedMissions[id] = true; store("robot.missions", savedMissions); renderMissions();
+  logLine("bot", "★ Mission complete: " + m.name);
+}
+var missionTick = 0;
+function checkMissions() {
+  if ((missionTick += 1) % 10) return;
+  missions.forEach(function (m) { if (!m.done && m.test()) markMission(m.id); });
+}
+var _hear = hear; hear = function (t) { _hear(t); if (/(what can you do|abilities|skills)/i.test(t) && result.abilities.talk.ok) markMission("talk"); };
+
+/* ---------------- Rendering ---------------- */
+var orbit = { theta: -0.7, phi: 0.95, dist: 1.0, follow: true, cx: 0, cz: 0 };
+function poseRobot(t) {
+  if (!R) return;
+  var c = state.cfg, h = R.h, w = R.w, bb = bodyBottom();
+  R.root.position.set(robot.x, robot.y, robot.z);
+  R.root.rotation.set(0, robot.yaw, 0);
+  var bob = 0, roll = 0, pitch = 0;
+  if (R.duck) {
+    var ls = 0.25 + 0.75 * growth;
+    R.duck.group.scale.set(ls, ls * (1 - DUCK_SQUAT * robot.squat), ls);
+    applyGait(R.duck, robotGait);
+  } else if (c.locomotion === "legs") {
+    var ph = robot.gait, amp = Math.min(1, Math.abs(robot.v) / Math.max(0.01, result.speed_mps) + Math.abs(robot.w) * 0.3);
+    bob = Math.abs(Math.sin(ph)) * 0.006 * amp; roll = Math.sin(ph) * 0.07 * amp;
+    var crouch = result.geometry.crouch_deg * Math.PI / 180;
+    var weak = !result.abilities.walk.ok;
+    R.legs.forEach(function (L) {
+      var s = L.side, swing = Math.sin(ph + (s > 0 ? 0 : Math.PI)) * 0.45 * amp * Math.sign(robot.v || 1);
+      var lift = Math.max(0, Math.cos(ph + (s > 0 ? 0 : Math.PI))) * 0.5 * amp;
+      var bend = legBend() + (weak && robot.wobble > 0 ? Math.sin(t * 30) * 0.1 : 0);
+      L.thigh.rotation.x = -(bend + lift) + swing;
+      L.knee.rotation.x = 2 * (bend + lift);
+      L.ankle.rotation.x = -(bend + lift) - swing;
+      L.thigh.scale.setScalar(0.25 + 0.75 * growth);
+    });
+  } else {
+    R.wheels.forEach(function (wg, i) { wg.children.forEach(function (ch) { ch.rotation.x = -robot.gait * 6 * (robot.v >= 0 ? 1 : -1) * (i < 2 ? 1 : 1); }); });
+    R.tracks.forEach(function (tr) {
+      var k = tr.lug.userData.k, per = 2 * (tr.w * 0.68) + Math.PI * tr.th, s = ((k / 14) * per + robot.gait * 0.05) % per;
+      var half = tr.w * 0.68, r = tr.th / 2;
+      if (s < half) tr.lug.position.set(0, r, half / 2 - s);
+      else if (s < half + Math.PI * r) { var a = (s - half) / r; tr.lug.position.set(0, r * Math.cos(a), -half / 2 - r * Math.sin(a)); }
+      else if (s < 2 * half + Math.PI * r) tr.lug.position.set(0, -r, -half / 2 + (s - half - Math.PI * r));
+      else { var a2 = (s - 2 * half - Math.PI * r) / r; tr.lug.position.set(0, -r * Math.cos(a2), half / 2 + r * Math.sin(a2)); }
+    });
+  }
+  if (tippedTimer > 0) pitch = Math.min(1.1, (2.5 - tippedTimer) * 4) * (tippedTimer > 0.4 ? 1 : tippedTimer / 0.4);
+  R.body.position.y = bb + bob;
+  R.body.rotation.set(pitch, 0, roll);
+  if (R.duck) {   // ride on the duck's trunk as it sways and bobs
+    R.body.position.x = R.duck.trunkPos.x; R.body.position.y += R.duck.trunkPos.y; R.body.position.z = R.duck.trunkPos.z;
+    R.body.quaternion.premultiply(R.duck.trunkQuat);
+  }
+  R.camPivot.rotation.x = -robot.camTilt;
+  if (R.arm) {
+    R.arm.base.rotation.y = armPose.yaw;
+    R.arm.shoulder.rotation.x = armPose.sh;
+    R.arm.elbow.rotation.x = armPose.el;
+    R.arm.wrist.rotation.x = armPose.wr;
+    var g = armPose.grip;
+    if (R.arm.hand.pollen) {
+      if (handPose.active && !autopilot) R.arm.hand.pollen.set(handPose.name, handPose.t);
+      else R.arm.hand.pollen.set("close", g);
+    }
+    R.arm.hand.fingers.forEach(function (f) {
+      if (f.kind === "jaw") f.g.position.x = f.side * f.spread * (1.6 - g * 0.85);
+      else if (f.kind === "finger") { f.g.rotation.x = g * 0.9; f.g2.rotation.x = g * 1.0; }
+      else if (f.kind === "thumb") f.g.rotation.z = -0.6 + g * 0.9;
+    });
+    if (robot.held && robot.held.mesh.parent !== R.arm.hand.group) {
+      scene.remove(robot.held.mesh); R.arm.hand.group.add(robot.held.mesh);
+      if (R.arm.hand.pollen) robot.held.mesh.position.set(0.035, 0.1, 0); else robot.held.mesh.position.set(0, R.arm.hl * 0.8, 0);
+      robot.held.mesh.rotation.set(0, 0, 0);
+    }
+  }
+}
+
+function resize() {
+  var r = box.getBoundingClientRect();
+  renderer.setSize(r.width, r.height, false);
+  camera.aspect = r.width / r.height; camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(box);
+
+var last = performance.now(), hudEl = $("hud");
+function frame(now) {
+  // Step the simulation in small slices so it keeps real time even when drawing is slow.
+  var real = Math.min(0.25, (now - last) / 1000); last = now;
+  var dt = Math.min(0.05, real);
+  for (var left = real; left > 1e-4; left -= 0.03) step(Math.min(0.03, left));
+  poseRobot(now / 1000);
+  if (face.mood) drawFace(now / 1000);
+  renderHandLab(now);
+  renderWalkLab(now);
+  if (bubbleTimer > 0) { bubbleTimer -= dt; if (bubbleTimer <= 0) $("bubble").hidden = true; }
+
+  // main camera
+  if (orbit.follow) { orbit.cx += (robot.x - orbit.cx) * Math.min(1, dt * 3); orbit.cz += (robot.z - orbit.cz) * Math.min(1, dt * 3); }
+  var ty = 0.06;
+  camera.position.set(orbit.cx + orbit.dist * Math.sin(orbit.phi) * Math.sin(orbit.theta), ty + orbit.dist * Math.cos(orbit.phi), orbit.cz + orbit.dist * Math.sin(orbit.phi) * Math.cos(orbit.theta));
+  camera.lookAt(orbit.cx, ty, orbit.cz);
+
+  var W = renderer.domElement.width / renderer.getPixelRatio(), H = renderer.domElement.height / renderer.getPixelRatio();
+  renderer.setScissorTest(false); renderer.setViewport(0, 0, W, H); renderer.render(scene, camera);
+  // picture-in-picture from the robot's camera
+  if (R) {
+    var pw = Math.round(W * 0.28), ph = Math.round(pw * 0.75), px = W - pw - 10, py = 10;
+    R.camAnchor.updateMatrixWorld(); robotCam.position.setFromMatrixPosition(R.camAnchor.matrixWorld);
+    var q = new THREE.Quaternion(); R.camAnchor.getWorldQuaternion(q); robotCam.quaternion.copy(q); robotCam.rotateY(Math.PI);
+    renderer.setScissorTest(true); renderer.setScissor(px, py, pw, ph); renderer.setViewport(px, py, pw, ph);
+    if (result.abilities.video.ok) { robotCam.aspect = pw / ph; robotCam.updateProjectionMatrix(); renderer.render(scene, robotCam); }
+    else { renderer.setClearColor(0x0b0f14, 1); renderer.clear(); }
+    renderer.setScissorTest(false);
+    $("pipLabel").style.bottom = (ph + 14) + "px";
+    var pf = $("pipFrame").style; pf.right = "8px"; pf.bottom = "8px"; pf.width = (pw + 4) + "px"; pf.height = (ph + 4) + "px";
+  }
+  hudEl.innerHTML = "";
+  [["SPEED", (Math.abs(robot.v)).toFixed(2) + " m/s"], ["DISTANCE AHEAD", isFinite(robot.tof) ? Math.round(robot.tof * 1000) + " mm" : "> 600 mm"],
+   ["HOLDING", robot.held ? robot.held.color + " block" : "nothing"], ["TASK", autopilot ? autopilot.type : program ? "program" : "idle"]]
+    .forEach(function (r) { var s = document.createElement("span"); s.textContent = r[0] + "  " + r[1]; hudEl.appendChild(s); });
+  requestAnimationFrame(frame);
+}
+
+/* ---------------- Input ---------------- */
+var typing = function (e) { return /INPUT|TEXTAREA|SELECT/.test(e.target.tagName); };
+addEventListener("keydown", function (e) {
+  if (typing(e)) return;
+  keys[e.code] = true;
+  if (/Arrow/.test(e.code)) e.preventDefault();
+  if (e.code === "KeyG") startPick(null);
+  if (e.code === "KeyR") startPlace(null);
+  if (e.code === "KeyQ") robot.camTilt = Math.min(0.8, robot.camTilt + 0.15);
+  if (e.code === "KeyE") robot.camTilt = Math.max(-0.8, robot.camTilt - 0.15);
+});
+addEventListener("keyup", function (e) { keys[e.code] = false; });
+document.querySelectorAll("[data-drive]").forEach(function (b) {
+  var k = b.dataset.drive;
+  b.addEventListener("pointerdown", function (e) { e.preventDefault(); held[k] = 1; });
+  ["pointerup", "pointerleave", "pointercancel"].forEach(function (ev) { b.addEventListener(ev, function () { held[k] = 0; }); });
+});
+var drag = null;
+canvas.addEventListener("pointerdown", function (e) { drag = { x: e.clientX, y: e.clientY }; canvas.setPointerCapture(e.pointerId); });
+canvas.addEventListener("pointermove", function (e) { if (!drag) return; orbit.theta -= (e.clientX - drag.x) * 0.008; orbit.phi = Math.max(0.15, Math.min(1.5, orbit.phi - (e.clientY - drag.y) * 0.006)); drag = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener("pointerup", function () { drag = null; });
+canvas.addEventListener("wheel", function (e) { e.preventDefault(); orbit.dist = Math.max(0.25, Math.min(3.2, orbit.dist * (1 + e.deltaY * 0.001))); }, { passive: false });
+$("b-grab").addEventListener("click", function () { startPick(null); });
+$("b-drop").addEventListener("click", function () { startPlace(null); });
+$("b-look").addEventListener("click", function () { robot.camTilt = robot.camTilt > 0.1 ? -0.3 : robot.camTilt < -0.1 ? 0 : 0.35; });
+$("b-cam").addEventListener("click", function () { orbit.follow = !orbit.follow; this.textContent = "Camera: " + (orbit.follow ? "follow" : "room"); if (!orbit.follow) { orbit.cx = 0; orbit.cz = 0; orbit.dist = 2.4; } else orbit.dist = 1.0; });
+$("b-reset").addEventListener("click", function () {
+  if (robot.held) { robot.held = null; }
+  if (R && R.arm) R.arm.hand.group.children.slice().forEach(function (c) { if (blocks.some(function (b) { return b.mesh === c; })) R.arm.hand.group.remove(c); });
+  resetBlocks(); autopilot = null; program = null; armTarget = null; tippedTimer = 0; standUp();
+  Object.assign(robot, { x: -0.5, z: -0.3, yaw: 0.6, v: 0, w: 0, y: 0, camTilt: 0, legDist: 0 }); face.mood = "normal";
+});
+$("b-run").addEventListener("click", startProgram);
+$("b-stop").addEventListener("click", function () { program = null; autopilot = null; armTarget = null; standUp(); logLine("bot", "Stopped."); });
+
+/* ---------------- Hand lab ---------------- */
+var POSE_NAMES = ["open", "close", "spread", "clench", "point"];
+function handCommand(name) {
+  if (POSE_NAMES.indexOf(name) < 0) return false;
+  handDemo = null; setHandPose(name); return true;
+}
+var handDemo = null;
+// Pollen's AmazingHand_Demo.py steps through these poses with short holds.
+var DEMO = [["close", 1, 1.2], ["close", 0, 0.8], ["spread", 1, 1.0], ["spread", 0, 0.6], ["clench", 1, 1.0], ["clench", 0, 0.6], ["point", 1, 1.2], ["point", 0, 0.8]];
+function runHandDemo(dt) {
+  if (!handDemo) return;
+  var st = DEMO[handDemo.i];
+  if (handDemo.t === 0) { handPose.active = true; if (handPose.name !== st[0] && handPose.t < 0.02) handPose.name = st[0]; handPose.target = st[1]; updatePoseButtons(); }
+  handDemo.t += dt;
+  if (Math.abs(handPose.t - st[1]) < 0.01 && handDemo.t > st[2]) { handDemo.i++; handDemo.t = 0; if (handDemo.i >= DEMO.length) { handDemo = null; updatePoseButtons(); } }
+}
+var poseWrap = $("handPoses");
+POSE_NAMES.forEach(function (n) {
+  var b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = n[0].toUpperCase() + n.slice(1); b.dataset.pose = n;
+  b.addEventListener("click", function () { handCommand(n); });
+  poseWrap.appendChild(b);
+});
+function updatePoseButtons() {
+  Array.prototype.forEach.call(poseWrap.children, function (b) {
+    var on = b.dataset.pose === "open" ? handPose.target === 0 : (handPose.name === b.dataset.pose && handPose.target === 1);
+    b.setAttribute("aria-pressed", String(on));
+  });
+}
+$("handT").addEventListener("input", function () {
+  handDemo = null; handPose.active = true; handPose.t = handPose.target = +this.value / 100; updatePoseButtons();
+});
+$("b-handDemo").addEventListener("click", function () { handDemo = { i: 0, t: 0 }; logLine("bot", "Playing Pollen's Amazing Hand demo."); });
+$("b-fitHand").addEventListener("click", function () {
+  state.cfg.arm = true; state.cfg.hand = "amazing_hand"; if (P.servos[state.cfg.arm_servo].stall_nm < 1) state.cfg.arm_servo = "sts3215";
+  cfgToForm(); refresh(true);
+  logLine("bot", "Fitted the Amazing Hand. Check the Will it work? panel: it weighs about 400 g.");
+});
+
+var lab = { renderer: null, scene: null, camera: null, hand: null, theta: 0.9, phi: 1.2, drag: null };
+(function setupHandLab() {
+  var cv = $("handView");
+  lab.renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+  lab.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  lab.scene = new THREE.Scene();
+  lab.scene.add(new THREE.HemisphereLight(0xffffff, 0x7d848c, 0.8));
+  var l = new THREE.DirectionalLight(0xffffff, 0.7); l.position.set(0.4, 0.6, 0.5); lab.scene.add(l);
+  lab.camera = new THREE.PerspectiveCamera(35, 4 / 3, 0.01, 5);
+  cv.addEventListener("pointerdown", function (e) { lab.drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener("pointermove", function (e) { if (!lab.drag) return; lab.theta -= (e.clientX - lab.drag.x) * 0.01; lab.phi = Math.max(0.3, Math.min(2.6, lab.phi - (e.clientY - lab.drag.y) * 0.01)); lab.drag = { x: e.clientX, y: e.clientY }; });
+  cv.addEventListener("pointerup", function () { lab.drag = null; });
+  new IntersectionObserver(function (es) { lab.visible = es[0].isIntersecting; }).observe(cv);
+  new ResizeObserver(function () { var r = cv.getBoundingClientRect(); if (!r.width) return; lab.renderer.setSize(r.width, r.height, false); lab.camera.aspect = r.width / r.height; lab.camera.updateProjectionMatrix(); }).observe(cv);
+  loadPollenHand().then(function (d) {
+    lab.hand = makePollenHand(d); lab.scene.add(lab.hand.group);
+    $("handMsg").hidden = true; updatePoseButtons();
+  }, function () {
+    $("handMsg").textContent = "Couldn't load pollen_hand.json and pollen_hand.b64.txt. Serve the sandbox folder over http (see README).";
+  });
+})();
+function renderHandLab(now) {
+  if (!lab.hand || !lab.visible || now - (lab.last || 0) < 50) return;
+  lab.last = now;
+  lab.scene.background = scene.background;
+  lab.hand.set(handPose.name, handPose.t);
+  if (!lab.drag && !handPose.active) lab.theta += 0.004;
+  var d = 0.3, cy = 0.1;
+  lab.camera.position.set(d * Math.sin(lab.phi) * Math.sin(lab.theta), cy + d * Math.cos(lab.phi), d * Math.sin(lab.phi) * Math.cos(lab.theta));
+  lab.camera.lookAt(0.03, cy, 0);
+  lab.renderer.render(lab.scene, lab.camera);
+  $("handT").value = Math.round(handPose.t * 100); $("handT_o").textContent = Math.round(handPose.t * 100) + "%";
+  var sv = pollenServos(handPose.name, handPose.t), names = ["index", "middle", "ring", "thumb"];
+  $("handServo").textContent = "Servo angles sent: " + sv.map(function (a, i) { return names[i] + " " + Math.round(a[0]) + "°/" + Math.round(a[1]) + "°"; }).join(" · ");
+}
+
+/* ---------------- Walk lab ---------------- */
+var walk = { renderer: null, scene: null, camera: null, duck: null, gait: newGait(), want: "forward", theta: 2.3, phi: 1.2, drag: null, visible: false, grid: null, gx: 0, gz: 0, gyaw: 0 };
+var WALK_CLIPS = [["stand", "Stand"], ["forward", "Forward"], ["backward", "Back"], ["left", "Turn left"], ["right", "Turn right"]];
+var walkWrap = $("walkClips");
+WALK_CLIPS.forEach(function (c) {
+  var b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = c[1]; b.dataset.clip = c[0];
+  b.addEventListener("click", function () { walk.want = c[0]; updateWalkButtons(); });
+  walkWrap.appendChild(b);
+});
+function updateWalkButtons() { Array.prototype.forEach.call(walkWrap.children, function (b) { b.setAttribute("aria-pressed", String(b.dataset.clip === walk.want)); }); }
+updateWalkButtons();
+$("b-growLegs").addEventListener("click", function () { setStage(3); });
+(function setupWalkLab() {
+  var cv = $("walkView");
+  walk.renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+  walk.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  walk.scene = new THREE.Scene();
+  walk.scene.add(new THREE.HemisphereLight(0xffffff, 0x7d848c, 0.8));
+  var l = new THREE.DirectionalLight(0xffffff, 0.7); l.position.set(0.5, 1, 0.6); walk.scene.add(l);
+  walk.grid = new THREE.GridHelper(2, 20, 0x8a96a0, 0x8a96a0); walk.grid.material.transparent = true; walk.grid.material.opacity = 0.35; walk.scene.add(walk.grid);
+  walk.camera = new THREE.PerspectiveCamera(35, 4 / 3, 0.01, 10);
+  cv.addEventListener("pointerdown", function (e) { walk.drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener("pointermove", function (e) { if (!walk.drag) return; walk.theta -= (e.clientX - walk.drag.x) * 0.01; walk.phi = Math.max(0.3, Math.min(1.5, walk.phi - (e.clientY - walk.drag.y) * 0.01)); walk.drag = { x: e.clientX, y: e.clientY }; });
+  cv.addEventListener("pointerup", function () { walk.drag = null; });
+  new IntersectionObserver(function (es) { walk.visible = es[0].isIntersecting; }).observe(cv);
+  new ResizeObserver(function () { var r = cv.getBoundingClientRect(); if (!r.width) return; walk.renderer.setSize(r.width, r.height, false); walk.camera.aspect = r.width / r.height; walk.camera.updateProjectionMatrix(); }).observe(cv);
+  loadDuck().then(function (d) {
+    walk.duck = makeDuck(d, ["leg", "trunk", "head"]); walk.scene.add(walk.duck.group);
+    $("walkMsg").hidden = true;
+    var mo = d.meta.motion, tw = d.meta.test_walk, fell = tw.some(function (r) { return r.fell; });
+    $("walkStats").textContent = "Measured gait: forward " + mo.forward.forward_mps.toFixed(3) + " m/s · back " + Math.abs(mo.backward.forward_mps).toFixed(3) +
+      " m/s · turning " + Math.round(Math.abs(mo.left.turn_radps) * 180 / Math.PI) + "°/s. Physics test (" + d.meta.mass_kg + " kg): " +
+      tw.filter(function (r) { return r.what !== "stand still"; }).map(function (r) { return r.what.replace(/ [0-9.]+ (m|rad)\/s/, "") + " " + r.seconds + " s → " + (/turn/.test(r.what) ? r.turned_deg + "°" : r.moved_mm + " mm"); }).join(" · ") +
+      (fell ? " · FELL OVER" : " · never fell.");
+  }, function () {
+    $("walkMsg").textContent = "Couldn't load open_duck.json and open_duck.b64.txt. Serve the sandbox folder over http (see README).";
+  });
+})();
+var walkLast = 0;
+function renderWalkLab(now) {
+  if (!walk.duck) return;
+  var dt = Math.min(0.1, (now - walkLast) / 1000); walkLast = now;
+  if (!walk.visible) return;
+  var fps = duck.data.meta.fps, mo = duck.data.meta.motion[walk.want];
+  advanceGait(walk.gait, walk.want, dt, fps);
+  // the duck walks on the spot; slide and turn the floor under it instead
+  walk.gyaw -= mo.turn_radps * dt; walk.gz -= mo.forward_mps * dt;
+  walk.grid.rotation.y = walk.gyaw; walk.grid.position.set(Math.sin(walk.gyaw) * (walk.gz % 0.1), 0, Math.cos(walk.gyaw) * (walk.gz % 0.1));
+  if (walk.renderPending && now - walk.renderPending < 50) return;
+  walk.renderPending = now;
+  applyGait(walk.duck, walk.gait);
+  walk.scene.background = scene.background;
+  if (!walk.drag) walk.theta += 0.002;
+  var d = 1.0, cy = 0.2;
+  walk.camera.position.set(d * Math.sin(walk.phi) * Math.sin(walk.theta), cy + d * Math.cos(walk.phi), d * Math.sin(walk.phi) * Math.cos(walk.theta));
+  walk.camera.lookAt(0, cy, 0);
+  walk.renderer.render(walk.scene, walk.camera);
+}
+
+/* ---------------- Saved designs ---------------- */
+var saved = store("robot.designs") || [];
+function renderSaved() {
+  var t = $("cmp");
+  var rows = saved.map(function (d) { var r = MODEL.evaluate(d.cfg, P); return { d: d, r: r }; });
+  var head = "<tr><th>Design</th><th>Mass</th><th>Speed</th><th>Life</th><th>AUD</th><th>Fails</th><th></th></tr>";
+  t.innerHTML = head + (rows.length ? "" : '<tr><td colspan="7" class="small">Saved designs appear here so you can compare them side by side.</td></tr>');
+  rows.forEach(function (x, i) {
+    var tr = document.createElement("tr"), fails = x.r.checks.filter(function (k) { return k.status === "fail"; }).length;
+    tr.innerHTML = "<td></td><td>" + fmtMass(x.r.mass_g) + "</td><td>" + x.r.speed_mps.toFixed(2) + "</td><td>" + Math.round(x.r.runtime_min) + "m</td><td>" + Math.round(x.r.cost_aud[0]) + "–" + Math.round(x.r.cost_aud[1]) + "</td><td>" + fails + '</td><td><button class="btn" data-load="' + i + '">Load</button> <button class="btn" data-del="' + i + '" aria-label="Delete">×</button></td>';
+    tr.firstChild.textContent = x.d.name; t.appendChild(tr);
+  });
+}
+$("cmp").addEventListener("click", function (e) {
+  var l = e.target.dataset.load, d = e.target.dataset.del;
+  if (l !== undefined) { state.cfg = MODEL.clone(saved[+l].cfg); state.stage = saved[+l].stage || state.stage; cfgToForm(); refresh(true); }
+  if (d !== undefined) { saved.splice(+d, 1); store("robot.designs", saved); renderSaved(); }
+});
+$("b-save").addEventListener("click", function () {
+  var name = $("saveName").value.trim() || ("Design " + (saved.length + 1));
+  saved.push({ name: name, stage: state.stage, cfg: MODEL.clone(state.cfg) }); store("robot.designs", saved); renderSaved(); $("saveName").value = "";
+});
+$("b-copy").addEventListener("click", function () {
+  var ta = $("json");
+  navigator.clipboard.writeText(ta.value).then(function () { $("copyMsg").textContent = "Copied."; }, function () { ta.select(); $("copyMsg").textContent = "Press Ctrl+C to copy."; });
+});
+$("b-load").addEventListener("click", function () {
+  try { var d = JSON.parse($("json").value); delete d.name; state.cfg = Object.assign(MODEL.clone(state.cfg), d); cfgToForm(); refresh(true); $("copyMsg").textContent = "Loaded."; }
+  catch (e) { $("copyMsg").textContent = "That text is not valid design JSON."; }
+});
+
+/* ---------------- Start ---------------- */
+applyTheme();
+new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", applyTheme);
+cfgToForm(); refresh(true); renderSaved(); resize();
+logLine("bot", "Hi! I'm your robot, stage 1. Drive me with W A S D, then evolve me with the stage buttons.");
+requestAnimationFrame(frame);
+// Read-only hook for automated tests (sandbox/test_sandbox.js).
+window.__robot = { walk: function () { return { state: duck.state, onRobot: !!(R && R.duck), clip: robotGait.clip, labClip: walk.gait.clip }; }, hand: function () { return { state: pollen.state, pose: handPose.name, t: handPose.t, onRobot: !!(R && R.arm && R.arm.hand.pollen) }; }, robot: robot, blocks: function () { return blocks; }, task: function () { return autopilot && (autopilot.type + ":" + (autopilot.phase || "")); }, arm: armPose };
+})();
+</script>

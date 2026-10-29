@@ -1,0 +1,22 @@
+{
+  "name": "Hatchling + micro-servo arm",
+  "body_mm": 120,
+  "height_mm": 80,
+  "locomotion": "wheels",
+  "drive_motor": "n20_100rpm",
+  "wheel_mm": 34,
+  "leg_servo": "sts3215",
+  "leg_mm": 160,
+  "arm": true,
+  "arm_servo": "mg90s",
+  "arm_mm": [
+    60,
+    55
+  ],
+  "hand": "gripper2",
+  "brain": "pico_w",
+  "battery": "aa4_nimh",
+  "voice": false,
+  "mast_mm": 20,
+  "payload_g": 20
+}

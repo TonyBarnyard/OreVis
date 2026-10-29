@@ -1,0 +1,22 @@
+{
+  "name": "Explorer",
+  "body_mm": 120,
+  "height_mm": 80,
+  "locomotion": "tracks",
+  "drive_motor": "n20_100rpm",
+  "wheel_mm": 44,
+  "leg_servo": "sts3215",
+  "leg_mm": 160,
+  "arm": false,
+  "arm_servo": "mg90s",
+  "arm_mm": [
+    60,
+    55
+  ],
+  "hand": "gripper2",
+  "brain": "pi_zero_2w",
+  "battery": "li18650_2s",
+  "voice": false,
+  "mast_mm": 30,
+  "payload_g": 20
+}
