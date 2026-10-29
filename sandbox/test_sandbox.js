@@ -6,7 +6,7 @@ const http = require('http'), fs = require('fs'), path = require('path');
 const dir = __dirname, threeLocal = process.argv[2];
 const server = http.createServer((req, res) => {
   const f = path.join(dir, decodeURIComponent(req.url.split('?')[0]).replace(/^\/$/, '/index.html'));
-  fs.readFile(f, (e, data) => { if (e) { res.writeHead(404); res.end(); return; } res.writeHead(200, { 'Content-Type': f.endsWith('.js') ? 'application/javascript' : 'text/html; charset=utf-8' }); res.end(data); });
+  fs.readFile(f, (e, data) => { if (e) { res.writeHead(404); res.end(); return; } res.writeHead(200, { 'Content-Type': f.endsWith('.js') ? 'application/javascript' : f.endsWith('.json') ? 'application/json' : f.endsWith('.txt') ? 'text/plain' : 'text/html; charset=utf-8' }); res.end(data); });
 }).listen(0);
 (async () => {
   const port = server.address().port, errors = [];

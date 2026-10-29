@@ -6,9 +6,10 @@ visible part is along the way. The sandbox plays these frames back, so the
 hand on screen moves exactly as Pollen's linkages do.
 
 Writes sandbox/pollen_hand.json (layout, colours, poses) and
-sandbox/pollen_hand.bin (meshes and frames). Run from the repo root:
+sandbox/pollen_hand.b64.txt (meshes and frames, base64 so any web host serves it). Run from the repo root:
   python sim/export_pollen_hand.py
 """
+import base64
 import json
 import sys
 from pathlib import Path
@@ -78,7 +79,7 @@ def main():
     i = np.concatenate(idx).ravel()
     pad = (-i.nbytes) % 4
     blob = v.tobytes() + i.tobytes() + b"\0" * pad + frame_blob.tobytes()
-    (OUT / "pollen_hand.bin").write_bytes(blob)
+    (OUT / "pollen_hand.b64.txt").write_text(base64.b64encode(blob).decode("ascii"))
     meta = {
         "source": "Pollen Robotics AmazingHand, Demo/AHSimulation AH_Right (Apache 2.0; meshes CC BY 4.0)",
         "units": "metres; hand frame: fingers along +z, palm faces +x",
