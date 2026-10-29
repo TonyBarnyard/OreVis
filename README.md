@@ -9,6 +9,7 @@ A small rounded-square robot that starts on wheels and evolves: tracks, then leg
 | `plan/` | The original project plan and `robot_project_plan_v2.xlsx` with the review, the evolution roadmap, later-stage parts and test results. |
 | `docs/PLAN_REVIEW.md` | What changed from the original plan, and why. |
 | `sim/OPEN_DUCK.md` | How to get the walking version going with the open-source Open Duck Mini. |
+| `third_party/open_duck/` | The **Open Duck Mini's trained walking policy** (Apache 2.0). `third_party/fetch_open_duck.sh` downloads the model it was trained on and the duck's full-detail 3D parts. |
 | `third_party/pollen/` | Free, open-source files from **Pollen Robotics**: the Amazing Hand's servo code (Python and Arduino) and its MuJoCo model. `third_party/fetch_pollen.sh` downloads the rest: the hand's print files (STL/STEP) and the Reachy Mini SDK with its talking app. |
 
 ## Try the sandbox
@@ -46,6 +47,19 @@ Latest results (`sim/results.json`):
 | 4 Helper (legs + arm) | Holds a block arm-out at 64% of shoulder stall, tilts 0.5° |
 | Helper + Amazing Hand | **Tips over** (37°), shoulder at stall |
 | Mini duck on SG90 servos | Knees hit **100%** of stall in a squat |
+
+## Walking: the Open Duck Mini
+
+```
+third_party/fetch_open_duck.sh       # once: the duck's model and 3D parts
+python sim/open_duck_walk.py         # the duck's own trained policy walks it in MuJoCo
+python sim/open_duck_walk.py --view  # watch it (needs a display)
+python sim/export_open_duck.py       # re-record the gait clips the sandbox plays
+```
+
+The trained walking policy really walks the duck in physics. It goes forward, turns both ways and walks backwards, and in our 21-second test it never fell. Measured: 0.096 m/s forward, 0.034 m/s backward, turning about 47°/s.
+
+In the sandbox, stage 3 and up grow the **real Open Duck legs**, playing gait recorded from that policy. The robot's shell replaces the duck's own body, which is the build `sim/OPEN_DUCK.md` recommends. The **Walk lab** panel shows the whole duck walking, with the physics test results.
 
 ## Pollen Robotics' Amazing Hand
 

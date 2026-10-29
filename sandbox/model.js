@@ -143,7 +143,7 @@
       checks.push({ id: "brain_walk", label: "Brain can run a walking policy", status: brain.rl_policy ? "pass" : "fail", ratio: brain.rl_policy ? 2 : 0,
         detail: brain.rl_policy ? brain.label + " can run the Open Duck runtime." : "The Pico W cannot run the neural-network walking policy. Use a Pi Zero 2 W or Pi 5." });
       locoOk = r >= 1 && fits && servo.feedback && brain.rl_policy;
-      speed = locoOk ? 0.75 * leg_m : 0;
+      speed = locoOk ? 0.55 * leg_m : 0;   // matches the Open Duck Mini's measured 0.096 m/s on ~0.17 m legs
       locoWatts = nLegServos * servo.watts_active * 0.6;
     } else {
       var rw = cfg.wheel_mm / 2000, eff = cfg.locomotion === "tracks" ? 0.7 : 1.0;

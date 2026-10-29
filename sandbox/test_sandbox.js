@@ -31,7 +31,23 @@ const server = http.createServer((req, res) => {
   const refusal = await page.$eval('#log', e => e.innerText);
   check('stage 1 refuses to pick', /can't do that yet/.test(refusal));
 
-  for (const st of [2, 3, 4]) { await page.click(`.stage[data-stage="${st}"]`); await page.waitForTimeout(400); }
+  // Stage 3 grows the real Open Duck legs and walks with its recorded gait
+  await page.click('#b-reset');
+  await page.click('.stage[data-stage="2"]'); await page.waitForTimeout(300);
+  await page.click('.stage[data-stage="3"]'); await page.waitForFunction(() => __robot.walk().onRobot, null, { timeout: 30000 }).catch(() => {});
+  check('stage 3 uses the Open Duck legs', (await page.evaluate(() => __robot.walk())).onRobot);
+  await page.waitForTimeout(2500);  // finish growing
+  const w0 = await page.evaluate(() => ({ x: __robot.robot.x, z: __robot.robot.z }));
+  await page.keyboard.down('KeyW'); await page.waitForTimeout(800);
+  const clip = (await page.evaluate(() => __robot.walk())).clip;
+  await page.waitForTimeout(2200); await page.keyboard.up('KeyW');
+  const walked = await page.evaluate((w0) => Math.hypot(__robot.robot.x - w0.x, __robot.robot.z - w0.z), w0);
+  check('duck legs play the forward gait while walking', clip === 'forward', clip);
+  check('walks at about the Open Duck speed (0.1 m/s)', walked > 0.15 && walked < 0.4, (walked * 1000).toFixed(0) + ' mm in 3 s');
+  if (shots) await page.screenshot({ path: shots + '/duck_legs.png' });
+  check('walk lab shows the Open Duck', (await page.evaluate(() => __robot.walk())).state === 'ready');
+
+  await page.click('.stage[data-stage="4"]'); await page.waitForTimeout(400);
   await page.click('#b-reset'); await page.waitForTimeout(2500);
   if (shots) await page.screenshot({ path: shots + '/stage4.png' });
   await page.fill('#talk', 'tidy up'); await page.press('#talk', 'Enter');
@@ -61,6 +77,7 @@ const server = http.createServer((req, res) => {
   check('hand lab moves to Pollen\'s point pose', hp.pose === 'point' && hp.t > 0.9, JSON.stringify(hp));
   await page.click('#b-fitHand'); await page.waitForTimeout(800);
   check('Amazing Hand mounts on the robot arm', (await page.evaluate(() => __robot.hand())).onRobot);
+  if (shots) { await page.locator('#walk-h').scrollIntoViewIfNeeded(); await page.waitForTimeout(600); await page.screenshot({ path: shots + '/walklab.png' }); }
   if (shots) { await page.locator('#hand-h').scrollIntoViewIfNeeded(); await page.screenshot({ path: shots + '/handlab.png' }); }
 
   check('no page errors', errors.length === 0, errors.join(' | '));

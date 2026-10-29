@@ -236,6 +236,14 @@ table.cmp th, table.cmp td { text-align: left; padding: 3px 5px; border-bottom: 
         </form>
         <div class="toggle"><input type="checkbox" id="speak" checked><label for="speak">Robot speaks out loud (when it has a voice)</label></div>
       </section>
+      <section class="panel" aria-labelledby="walk-h">
+        <h2 id="walk-h">Walk lab: Open Duck Mini</h2>
+        <div class="handbox"><canvas id="walkView" aria-label="Open Duck Mini walking, 3D"></canvas><div class="handmsg" id="walkMsg">Loading the Open Duck model…</div></div>
+        <div class="row posebtns" id="walkClips" style="margin-top:8px"></div>
+        <div class="servos" id="walkStats"></div>
+        <div class="row" style="margin-top:6px"><button class="btn" id="b-growLegs">Grow these legs on the robot</button></div>
+        <p class="small">Every step is the Open Duck's own trained walking policy, run in MuJoCo physics and recorded (sim/open_duck_walk.py). Parts from Open_Duck_Mini, Apache 2.0. Drag to turn it.</p>
+      </section>
       <section class="panel" aria-labelledby="hand-h">
         <h2 id="hand-h">Hand lab: Pollen Amazing Hand</h2>
         <div class="handbox"><canvas id="handView" aria-label="Pollen Robotics Amazing Hand, 3D"></canvas><div class="handmsg" id="handMsg">Loading Pollen's hand model…</div></div>
@@ -564,8 +572,14 @@ function buildRobot() {
       });
       R.wheels.forEach(function (wg) { wg.visible = false; });
     }
+  } else if (duck.state === "ready") {
+    // The real Open Duck Mini legs, playing its recorded gait. The robot's shell replaces the duck's
+    // own body, so the hip motors sit inside the shell.
+    R.duck = makeDuck(duck.data, ["leg"]);
+    root.add(R.duck.group);
   } else {
-    // Duck-style biped: hip yaw/roll/pitch, knee, ankle.
+    if (duck.state === "idle" || duck.state === "loading") loadDuck().then(function () { if (state.cfg.locomotion === "legs") buildRobot(); }, function () {});
+    // Duck-style biped stand-in until the Open Duck model loads: hip yaw/roll/pitch, knee, ankle.
     [-1, 1].forEach(function (s) {
       var hip = new THREE.Group(); hip.position.set(s * geo.hip_spread * MM, 0, 0);
       var hipBlock = boxm(w * 0.16, w * 0.12, w * 0.2, mat.dark); hipBlock.position.y = -w * 0.03; hip.add(hipBlock);
@@ -637,15 +651,14 @@ function buildHand(type, len, aw) {
   return { group: g, fingers: fingers };
 }
 
-/* ---------------- Pollen Robotics Amazing Hand ---------------- */
-// Parts and finger motion recorded from Pollen's own MuJoCo model by sim/export_pollen_hand.py:
-// for each named pose, frames from fully open (t = 0) to the pose (t = 1).
-var pollen = { state: "idle", data: null, promise: null };
-function loadPollenHand() {
-  if (pollen.promise) return pollen.promise;
-  pollen.state = "loading";
+/* ---------------- Recorded 3D models (Pollen hand, Open Duck) ---------------- */
+// <name>.json describes the parts; <name>.b64.txt holds meshes and recorded frames
+// (see sim/export_pollen_hand.py and sim/export_open_duck.py).
+function loadPack(name, slot) {
+  if (slot.promise) return slot.promise;
+  slot.state = "loading";
   var get = function (url, kind) { return fetch(url).then(function (r) { if (!r.ok) throw new Error(url + " " + r.status); return r[kind](); }); };
-  pollen.promise = Promise.all([get("pollen_hand.json", "json"), get("pollen_hand.b64.txt", "text")]).then(function (res) {
+  slot.promise = Promise.all([get(name + ".json", "json"), get(name + ".b64.txt", "text")]).then(function (res) {
     var meta = res[0], raw = atob(res[1].trim()), bytes = new Uint8Array(raw.length);
     for (var j = 0; j < raw.length; j++) bytes[j] = raw.charCodeAt(j);
     var buf = bytes.buffer;
@@ -658,13 +671,18 @@ function loadPollenHand() {
       return g;
     });
     var mats = {};
-    pollen.data = { meta: meta, geos: geos, frames: new Float32Array(buf, meta.frames_offset),
+    slot.data = { meta: meta, geos: geos, frames: new Float32Array(buf, meta.frames_offset),
       mat: function (rgb) { var k = rgb.join(); return mats[k] || (mats[k] = new THREE.MeshStandardMaterial({ color: new THREE.Color(rgb[0], rgb[1], rgb[2]), roughness: 0.55, metalness: 0.05 })); } };
-    pollen.state = "ready";
-    return pollen.data;
-  }).catch(function (e) { pollen.state = "failed"; pollen.error = e; throw e; });
-  return pollen.promise;
+    slot.state = "ready";
+    return slot.data;
+  }).catch(function (e) { slot.state = "failed"; slot.error = e; throw e; });
+  return slot.promise;
 }
+
+/* ---------------- Pollen Robotics Amazing Hand ---------------- */
+// For each named pose, frames recorded from Pollen's model going from fully open (t = 0) to the pose (t = 1).
+var pollen = { state: "idle", data: null, promise: null };
+function loadPollenHand() { return loadPack("pollen_hand", pollen); }
 var _q0 = new THREE.Quaternion(), _q1 = new THREE.Quaternion();
 function makePollenHand(d) {
   // Pollen's frame has the fingers along +z; turn it so they run along +y like the other hands.
@@ -702,6 +720,72 @@ function setHandPose(name) {
   updatePoseButtons();
 }
 
+/* ---------------- Open Duck Mini legs ---------------- */
+// Looping gait clips (stand, forward, backward, left, right) recorded while the Open Duck's own
+// trained walking policy drove it in MuJoCo. Poses are relative to the duck's heading.
+var duck = { state: "idle", data: null, promise: null };
+function loadDuck() { return loadPack("open_duck", duck); }
+// Duck frame is x forward, y left, z up; the sandbox robot is z forward, x left, y up.
+var DUCK_BASIS = new THREE.Matrix4().makeBasis(new THREE.Vector3(0, 0, 1), new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, 1, 0));
+var DUCK_Q = new THREE.Quaternion().setFromRotationMatrix(DUCK_BASIS), DUCK_QI = DUCK_Q.clone().invert();
+var _v0 = new THREE.Vector3(), _v1 = new THREE.Vector3(), _qa = new THREE.Quaternion(), _qb = new THREE.Quaternion();
+function makeDuck(d, include) {
+  var outer = new THREE.Group(), inner = new THREE.Group(); inner.quaternion.copy(DUCK_Q); outer.add(inner);
+  var parts = [], meta = d.meta, nG = meta.geoms.length, nF = meta.frames_per_clip, F = d.frames;
+  meta.geoms.forEach(function (gm, i) {
+    if (include.indexOf(gm.part) < 0) return;
+    var m = new THREE.Mesh(d.geos[gm.mesh], d.mat(gm.rgb)); m.castShadow = true; inner.add(m); parts.push({ mesh: m, i: i });
+  });
+  var trunkRef = meta.geoms.findIndex(function (gm) { return gm.part === "trunk"; });
+  function pose(clip, frame, i, pos, quat) {
+    var c = Math.max(0, meta.clips.indexOf(clip)), f = ((frame % nF) + nF) % nF, k = Math.floor(f), a = f - k, k1 = (k + 1) % nF;
+    var o0 = ((c * nF + k) * nG + i) * 7, o1 = ((c * nF + k1) * nG + i) * 7;
+    pos.set(F[o0] + (F[o1] - F[o0]) * a, F[o0 + 1] + (F[o1 + 1] - F[o0 + 1]) * a, F[o0 + 2] + (F[o1 + 2] - F[o0 + 2]) * a);
+    _qa.set(F[o0 + 4], F[o0 + 5], F[o0 + 6], F[o0 + 3]); _qb.set(F[o1 + 4], F[o1 + 5], F[o1 + 6], F[o1 + 3]);
+    quat.copy(_qa).slerp(_qb, a);
+  }
+  var refPos = new THREE.Vector3(), refQuat = new THREE.Quaternion();
+  pose("stand", 0, trunkRef, refPos, refQuat);
+  var top = Infinity;
+  meta.geoms.forEach(function (gm, i) {   // underside of the duck's body when standing: the robot's shell takes its place there
+    if (gm.part !== "trunk") return;
+    var g = d.geos[gm.mesh]; if (!g.boundingBox) g.computeBoundingBox();
+    pose("stand", 0, i, _v0, _qa);
+    var bb = g.boundingBox.clone().applyMatrix4(new THREE.Matrix4().compose(_v0, _qa, new THREE.Vector3(1, 1, 1)));
+    top = Math.min(top, bb.min.z);
+  });
+  var duckObj = { group: outer, top: top, trunkPos: new THREE.Vector3(), trunkQuat: new THREE.Quaternion(),
+    // Blend clip A at frame fa with clip B at frame fb (w = weight of B); also returns how the trunk moved.
+    set: function (ca, fa, cb, fb, w) {
+      parts.forEach(function (p) {
+        pose(ca, fa, p.i, p.mesh.position, p.mesh.quaternion);
+        if (w > 0) { pose(cb, fb, p.i, _v1, _qb); p.mesh.position.lerp(_v1, w); p.mesh.quaternion.slerp(_qb, w); }
+      });
+      pose(ca, fa, trunkRef, _v0, _qa);
+      if (w > 0) { pose(cb, fb, trunkRef, _v1, _qb); _v0.lerp(_v1, w); _qa.slerp(_qb, w); }
+      // trunk motion relative to standing, turned into the sandbox's axes
+      this.trunkPos.copy(_v0).sub(refPos).applyQuaternion(DUCK_Q);
+      this.trunkQuat.copy(DUCK_Q).multiply(_qa).multiply(refQuat.clone().invert()).multiply(DUCK_QI);
+    } };
+  duckObj.set("stand", 0, "stand", 0, 0);
+  return duckObj;
+}
+// Gait state shared by the robot's legs and the walk lab: which clip is playing and where in it.
+function gaitClip(v, w) {
+  if (Math.abs(w) > 0.25) return w > 0 ? "left" : "right";
+  if (v > 0.01) return "forward";
+  if (v < -0.01) return "backward";
+  return "stand";
+}
+function newGait() { return { clip: "stand", frame: 0, prev: null, prevFrame: 0, blend: 0 }; }
+function advanceGait(g, clip, dt, fps) {
+  if (clip !== g.clip) { g.prev = g.clip; g.prevFrame = g.frame; g.clip = clip; g.blend = 1; }
+  g.frame += dt * fps; g.prevFrame += dt * fps;
+  if (g.blend > 0) g.blend = Math.max(0, g.blend - dt * 4);
+}
+function applyGait(obj, g) { obj.set(g.clip, g.frame, g.prev || g.clip, g.prevFrame, g.blend); }
+var robotGait = newGait();
+
 /* ---------------- Simulation ---------------- */
 var keys = {}, held = { f: 0, b: 0, l: 0, r: 0 };
 var program = null, programWait = 0;
@@ -715,8 +799,12 @@ function legBend(squat) {
   if (!result.abilities.walk.ok) return 0.9;
   return crouch + (squat === undefined ? robot.squat : squat) * (MAX_BEND - crouch);
 }
+// With Open Duck legs, squatting is shown by lowering the legs up to 35%; the bench (sim/bench.py)
+// checks the knee load of a real squat.
+var DUCK_SQUAT = 0.35;
 function bodyBottom(squat) {
   if (state.cfg.locomotion !== "legs") return result.geometry.body_bottom * MM;
+  if (R && R.duck) return R.duck.top * (0.25 + 0.75 * growth) * (1 - DUCK_SQUAT * (squat === undefined ? robot.squat : squat));
   var g = result.geometry, legScale = 0.25 + 0.75 * growth;
   return (g.thigh + g.shin) * MM * legScale * Math.cos(legBend(squat)) + state.cfg.body_mm * MM * 0.06 + 0.008;
 }
@@ -766,9 +854,14 @@ function step(dt) {
   var turn = (keys.KeyA || keys.ArrowLeft || held.l ? 1 : 0) - (keys.KeyD || keys.ArrowRight || held.r ? 1 : 0);
   var manual = fwd !== 0 || turn !== 0;
   if (manual && (autopilot || program)) { autopilot = null; program = null; logLine("bot", "Manual control. Task cancelled."); }
-  var cmdV = fwd * maxV, cmdW = turn * 2.2;
-  if (autopilot) { var a = runAutopilot(dt); cmdV = a.v * maxV; cmdW = a.w; }
-  else if (program) { var p = runProgram(dt); cmdV = p.v * maxV; cmdW = p.w; }
+  var maxW = 2.2;
+  if (cfg.locomotion === "legs" && R && R.duck) {   // the Open Duck's measured gait speeds
+    var mo = duck.data.meta.motion; maxV = mo.forward.forward_mps; maxW = Math.abs(mo.left.turn_radps);
+  }
+  var cmdV = fwd * maxV, cmdW = turn * maxW;
+  if (autopilot) { var a = runAutopilot(dt); cmdV = a.v * maxV; cmdW = Math.max(-maxW, Math.min(maxW, a.w)); }
+  else if (program) { var p = runProgram(dt); cmdV = p.v * maxV; cmdW = Math.max(-maxW, Math.min(maxW, p.w)); }
+  if (cmdV < 0 && cfg.locomotion === "legs" && R && R.duck) cmdV = Math.max(cmdV, duck.data.meta.motion.backward.forward_mps);
 
   if (!ok && (cmdV !== 0 || cmdW !== 0)) {
     if (!robot.warned) { robot.warned = 1; say(cfg.locomotion === "legs" ? "My legs are too weak!" : "My motors are too weak!", false); face.mood = "sad"; }
@@ -794,6 +887,7 @@ function step(dt) {
   var moving = Math.abs(robot.v) > 0.003 || Math.abs(robot.w) > 0.05;
   if (moving) robot.gait += dt * (cfg.locomotion === "legs" ? 7 : 1) * (Math.abs(robot.v) / Math.max(maxV, 0.01) + Math.abs(robot.w) * 0.25 + 0.2);
   if (cfg.locomotion === "legs") robot.legDist = (robot.legDist || 0) + Math.abs(robot.v) * dt;
+  if (R && R.duck) advanceGait(robotGait, ok && tippedTimer <= 0 ? gaitClip(robot.v, robot.w) : "stand", dt, duck.data.meta.fps);
   if (robot.wobble > 0) robot.wobble -= dt;
 
   // Arm targets, squat and the hand
@@ -1202,7 +1296,11 @@ function poseRobot(t) {
   R.root.position.set(robot.x, robot.y, robot.z);
   R.root.rotation.set(0, robot.yaw, 0);
   var bob = 0, roll = 0, pitch = 0;
-  if (c.locomotion === "legs") {
+  if (R.duck) {
+    var ls = 0.25 + 0.75 * growth;
+    R.duck.group.scale.set(ls, ls * (1 - DUCK_SQUAT * robot.squat), ls);
+    applyGait(R.duck, robotGait);
+  } else if (c.locomotion === "legs") {
     var ph = robot.gait, amp = Math.min(1, Math.abs(robot.v) / Math.max(0.01, result.speed_mps) + Math.abs(robot.w) * 0.3);
     bob = Math.abs(Math.sin(ph)) * 0.006 * amp; roll = Math.sin(ph) * 0.07 * amp;
     var crouch = result.geometry.crouch_deg * Math.PI / 180;
@@ -1230,6 +1328,10 @@ function poseRobot(t) {
   if (tippedTimer > 0) pitch = Math.min(1.1, (2.5 - tippedTimer) * 4) * (tippedTimer > 0.4 ? 1 : tippedTimer / 0.4);
   R.body.position.y = bb + bob;
   R.body.rotation.set(pitch, 0, roll);
+  if (R.duck) {   // ride on the duck's trunk as it sways and bobs
+    R.body.position.x = R.duck.trunkPos.x; R.body.position.y += R.duck.trunkPos.y; R.body.position.z = R.duck.trunkPos.z;
+    R.body.quaternion.premultiply(R.duck.trunkQuat);
+  }
   R.camPivot.rotation.x = -robot.camTilt;
   if (R.arm) {
     R.arm.base.rotation.y = armPose.yaw;
@@ -1270,6 +1372,7 @@ function frame(now) {
   poseRobot(now / 1000);
   if (face.mood) drawFace(now / 1000);
   renderHandLab(now);
+  renderWalkLab(now);
   if (bubbleTimer > 0) { bubbleTimer -= dt; if (bubbleTimer <= 0) $("bubble").hidden = true; }
 
   // main camera
@@ -1408,6 +1511,65 @@ function renderHandLab(now) {
   $("handServo").textContent = "Servo angles sent: " + sv.map(function (a, i) { return names[i] + " " + Math.round(a[0]) + "°/" + Math.round(a[1]) + "°"; }).join(" · ");
 }
 
+/* ---------------- Walk lab ---------------- */
+var walk = { renderer: null, scene: null, camera: null, duck: null, gait: newGait(), want: "forward", theta: 2.3, phi: 1.2, drag: null, visible: false, grid: null, gx: 0, gz: 0, gyaw: 0 };
+var WALK_CLIPS = [["stand", "Stand"], ["forward", "Forward"], ["backward", "Back"], ["left", "Turn left"], ["right", "Turn right"]];
+var walkWrap = $("walkClips");
+WALK_CLIPS.forEach(function (c) {
+  var b = document.createElement("button"); b.className = "btn"; b.type = "button"; b.textContent = c[1]; b.dataset.clip = c[0];
+  b.addEventListener("click", function () { walk.want = c[0]; updateWalkButtons(); });
+  walkWrap.appendChild(b);
+});
+function updateWalkButtons() { Array.prototype.forEach.call(walkWrap.children, function (b) { b.setAttribute("aria-pressed", String(b.dataset.clip === walk.want)); }); }
+updateWalkButtons();
+$("b-growLegs").addEventListener("click", function () { setStage(3); });
+(function setupWalkLab() {
+  var cv = $("walkView");
+  walk.renderer = new THREE.WebGLRenderer({ canvas: cv, antialias: true });
+  walk.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  walk.scene = new THREE.Scene();
+  walk.scene.add(new THREE.HemisphereLight(0xffffff, 0x7d848c, 0.8));
+  var l = new THREE.DirectionalLight(0xffffff, 0.7); l.position.set(0.5, 1, 0.6); walk.scene.add(l);
+  walk.grid = new THREE.GridHelper(2, 20, 0x8a96a0, 0x8a96a0); walk.grid.material.transparent = true; walk.grid.material.opacity = 0.35; walk.scene.add(walk.grid);
+  walk.camera = new THREE.PerspectiveCamera(35, 4 / 3, 0.01, 10);
+  cv.addEventListener("pointerdown", function (e) { walk.drag = { x: e.clientX, y: e.clientY }; cv.setPointerCapture(e.pointerId); });
+  cv.addEventListener("pointermove", function (e) { if (!walk.drag) return; walk.theta -= (e.clientX - walk.drag.x) * 0.01; walk.phi = Math.max(0.3, Math.min(1.5, walk.phi - (e.clientY - walk.drag.y) * 0.01)); walk.drag = { x: e.clientX, y: e.clientY }; });
+  cv.addEventListener("pointerup", function () { walk.drag = null; });
+  new IntersectionObserver(function (es) { walk.visible = es[0].isIntersecting; }).observe(cv);
+  new ResizeObserver(function () { var r = cv.getBoundingClientRect(); if (!r.width) return; walk.renderer.setSize(r.width, r.height, false); walk.camera.aspect = r.width / r.height; walk.camera.updateProjectionMatrix(); }).observe(cv);
+  loadDuck().then(function (d) {
+    walk.duck = makeDuck(d, ["leg", "trunk", "head"]); walk.scene.add(walk.duck.group);
+    $("walkMsg").hidden = true;
+    var mo = d.meta.motion, tw = d.meta.test_walk, fell = tw.some(function (r) { return r.fell; });
+    $("walkStats").textContent = "Measured gait: forward " + mo.forward.forward_mps.toFixed(3) + " m/s · back " + Math.abs(mo.backward.forward_mps).toFixed(3) +
+      " m/s · turning " + Math.round(Math.abs(mo.left.turn_radps) * 180 / Math.PI) + "°/s. Physics test (" + d.meta.mass_kg + " kg): " +
+      tw.filter(function (r) { return r.what !== "stand still"; }).map(function (r) { return r.what.replace(/ [0-9.]+ (m|rad)\/s/, "") + " " + r.seconds + " s → " + (/turn/.test(r.what) ? r.turned_deg + "°" : r.moved_mm + " mm"); }).join(" · ") +
+      (fell ? " · FELL OVER" : " · never fell.");
+  }, function () {
+    $("walkMsg").textContent = "Couldn't load open_duck.json and open_duck.b64.txt. Serve the sandbox folder over http (see README).";
+  });
+})();
+var walkLast = 0;
+function renderWalkLab(now) {
+  if (!walk.duck) return;
+  var dt = Math.min(0.1, (now - walkLast) / 1000); walkLast = now;
+  if (!walk.visible) return;
+  var fps = duck.data.meta.fps, mo = duck.data.meta.motion[walk.want];
+  advanceGait(walk.gait, walk.want, dt, fps);
+  // the duck walks on the spot; slide and turn the floor under it instead
+  walk.gyaw -= mo.turn_radps * dt; walk.gz -= mo.forward_mps * dt;
+  walk.grid.rotation.y = walk.gyaw; walk.grid.position.set(Math.sin(walk.gyaw) * (walk.gz % 0.1), 0, Math.cos(walk.gyaw) * (walk.gz % 0.1));
+  if (walk.renderPending && now - walk.renderPending < 50) return;
+  walk.renderPending = now;
+  applyGait(walk.duck, walk.gait);
+  walk.scene.background = scene.background;
+  if (!walk.drag) walk.theta += 0.002;
+  var d = 1.0, cy = 0.2;
+  walk.camera.position.set(d * Math.sin(walk.phi) * Math.sin(walk.theta), cy + d * Math.cos(walk.phi), d * Math.sin(walk.phi) * Math.cos(walk.theta));
+  walk.camera.lookAt(0, cy, 0);
+  walk.renderer.render(walk.scene, walk.camera);
+}
+
 /* ---------------- Saved designs ---------------- */
 var saved = store("robot.designs") || [];
 function renderSaved() {
@@ -1447,6 +1609,6 @@ cfgToForm(); refresh(true); renderSaved(); resize();
 logLine("bot", "Hi! I'm your robot, stage 1. Drive me with W A S D, then evolve me with the stage buttons.");
 requestAnimationFrame(frame);
 // Read-only hook for automated tests (sandbox/test_sandbox.js).
-window.__robot = { hand: function () { return { state: pollen.state, pose: handPose.name, t: handPose.t, onRobot: !!(R && R.arm && R.arm.hand.pollen) }; }, robot: robot, blocks: function () { return blocks; }, task: function () { return autopilot && (autopilot.type + ":" + (autopilot.phase || "")); }, arm: armPose };
+window.__robot = { walk: function () { return { state: duck.state, onRobot: !!(R && R.duck), clip: robotGait.clip, labClip: walk.gait.clip }; }, hand: function () { return { state: pollen.state, pose: handPose.name, t: handPose.t, onRobot: !!(R && R.arm && R.arm.hand.pollen) }; }, robot: robot, blocks: function () { return blocks; }, task: function () { return autopilot && (autopilot.type + ":" + (autopilot.phase || "")); }, arm: armPose };
 })();
 </script>

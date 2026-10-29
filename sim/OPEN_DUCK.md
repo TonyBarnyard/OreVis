@@ -28,6 +28,13 @@ The sandbox and `bench.py` can tell you if a pair of legs is strong enough to st
    ```
    Training runs that long need a computer with a decent NVIDIA GPU, or a rented cloud GPU for a few hours. Don't try it on the Pi.
 
+## Already in this project
+
+- `third_party/open_duck/BEST_WALK_ONNX_2.onnx`: the trained policy (Apache 2.0).
+- `third_party/fetch_open_duck.sh`: downloads the training model and the 3D parts at pinned commits.
+- `sim/open_duck_walk.py`: runs the policy exactly as Open_Duck_Playground's `mujoco_infer.py` does, with no window. It reports distance, turning and tilt. In our 21-second script the duck walked 543 mm in 6 s, turned 137° in 3 s and never fell.
+- `sim/export_open_duck.py`: records the gait clips the sandbox plays on the robot's legs and in the Walk lab.
+
 ## What the physics bench already tells you before you train
 
 - STS3215 knees hold the 1.36 kg Helper in a crouch at about 7% of stall, and peak at about 36% during a full squat. There is room left for walking.

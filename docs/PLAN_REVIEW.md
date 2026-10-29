@@ -20,15 +20,16 @@ The updated spreadsheet is `plan/robot_project_plan_v2.xlsx`. Every original row
 | 3 | Leave a 70 × 35 mm bay and a 5 V 3 A rail for a **Pi Zero 2 W** in the first shell | Video, walking, speech and the hand all need a Linux board. The Pico W stays as the real-time motor, face and safety controller. |
 | 4 | Move to a **2S 7.4 V pack with BMS, fuse and switch** before stage 3 | Bus servos need about 7.4 V. 4×AA at 4.8 V is fine for stage 1 only. Charge LiPo under supervision, in a LiPo bag. |
 | 5 | **Walking: adopt Open Duck Mini's legs and trained policy** instead of designing new legs | It is open source, proven and runs on a Pi Zero 2 W. Ten STS3215 servos need about a 170 mm body. They will not fit the 120 mm shell. The round robot becomes the duck's head and body. See `sim/OPEN_DUCK.md`. |
-| 6 | **One servo family**: Feetech serial-bus servos for legs, arm and hand | One 3-wire bus and one driver board, and the servos report their angle, which the walking policy needs. Open Duck, LeRobot SO-101 and Pollen's Amazing Hand all use them. |
-| 7 | **Hand: start with a 45 g three-finger tendon hand** | Pollen's Amazing Hand is about 400 g. The bench shows the 1.36 kg walker tips 37° holding it out. The light hand holds a 20 g block at 64% of shoulder stall with no tipping. Keep the Amazing Hand for a bench-mounted arm later. |
-| 8 | **Use Pollen Robotics' free Amazing Hand files** for the bench-mounted hand | Print files (CC BY 4.0), servo code and a MuJoCo model (Apache 2.0) are in `third_party/pollen` and `third_party/fetch_pollen.sh`. Pollen's model shows the closed fingertips stop about 46 mm from the thumb, so test with 50 mm objects before 30 mm ones. |
-| 9 | Teach the walker to **squat before reaching** | A 17 cm arm mounted 26 cm up can't reach the floor standing. The sandbox squats about 63° at the knee. The bench shows STS3215 knees peak at 36% of stall doing it. |
-| 10 | **Avoid hobby servos for legs** | SG90s in a 120 mm mini-duck hit 100% of stall in a squat, and they can't report their angle. |
-| 11 | Micro-servo arm on the Hatchling works, but barely | An MG90S shoulder sits at 93% of stall holding a 20 g block out straight. Use a shorter arm or a stronger shoulder servo. |
-| 12 | **Stage 5 voice: start from Pollen's Reachy Mini conversation app** | Open source (Apache 2.0). It already links a microphone, a speaker and a language model to a small robot. Fetch it with `third_party/fetch_pollen.sh`. |
-| 13 | Write behaviours against one small hardware interface (`hal.py`) | The same pick, place and tidy code then runs in the sandbox, in MuJoCo and on the robot. |
-| 14 | P04 (set up the computer) no longer waits for parts | The computer, Thonny and the sandbox can be set up while parts ship. |
+| 6 | **The trained walking policy really walks.** Check it with `python sim/open_duck_walk.py` | In our physics run the duck walked forward at 0.096 m/s, turned about 47°/s and walked backwards for 21 s without falling. The sandbox's stage 3+ legs play this recorded gait. The duck's hips attach about 21 cm up, so the robot's shell replaces the duck's body, with the hip motors inside. |
+| 7 | **One servo family**: Feetech serial-bus servos for legs, arm and hand | One 3-wire bus and one driver board, and the servos report their angle, which the walking policy needs. Open Duck, LeRobot SO-101 and Pollen's Amazing Hand all use them. |
+| 8 | **Hand: start with a 45 g three-finger tendon hand** | Pollen's Amazing Hand is about 400 g. The bench shows the 1.36 kg walker tips 37° holding it out. The light hand holds a 20 g block at 64% of shoulder stall with no tipping. Keep the Amazing Hand for a bench-mounted arm later. |
+| 9 | **Use Pollen Robotics' free Amazing Hand files** for the bench-mounted hand | Print files (CC BY 4.0), servo code and a MuJoCo model (Apache 2.0) are in `third_party/pollen` and `third_party/fetch_pollen.sh`. Pollen's model shows the closed fingertips stop about 46 mm from the thumb, so test with 50 mm objects before 30 mm ones. |
+| 10 | Teach the walker to **squat before reaching** | A 17 cm arm mounted 26 cm up can't reach the floor standing. The sandbox squats about 63° at the knee. The bench shows STS3215 knees peak at 36% of stall doing it. |
+| 11 | **Avoid hobby servos for legs** | SG90s in a 120 mm mini-duck hit 100% of stall in a squat, and they can't report their angle. |
+| 12 | Micro-servo arm on the Hatchling works, but barely | An MG90S shoulder sits at 93% of stall holding a 20 g block out straight. Use a shorter arm or a stronger shoulder servo. |
+| 13 | **Stage 5 voice: start from Pollen's Reachy Mini conversation app** | Open source (Apache 2.0). It already links a microphone, a speaker and a language model to a small robot. Fetch it with `third_party/fetch_pollen.sh`. |
+| 14 | Write behaviours against one small hardware interface (`hal.py`) | The same pick, place and tidy code then runs in the sandbox, in MuJoCo and on the robot. |
+| 15 | P04 (set up the computer) no longer waits for parts | The computer, Thonny and the sandbox can be set up while parts ship. |
 
 ## Evolution roadmap
 
