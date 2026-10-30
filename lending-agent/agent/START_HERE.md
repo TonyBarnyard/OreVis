@@ -9,27 +9,17 @@ download the Excel and Word files the agent produces.
 2. Set a **monthly spend limit** (for example $100) so costs can't run away.
 3. Under **API keys**, create a key and copy it somewhere safe. It starts with `sk-ant-`.
 
-## 2. Run it on your own computer (simplest)
+## 2. Start it on your own computer
 
-1. Install Python 3.12 from python.org.
+1. Install **Python 3.12** from python.org. On Windows, tick **"Add python.exe to PATH"**.
 2. Download this project (GitHub → **Code** → **Download ZIP**) and unzip it.
-3. Open a terminal in the `lending-agent/agent` folder and run:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Start the app.
-   - Mac or Linux:
-
-     ```bash
-     export ANTHROPIC_API_KEY=sk-ant-...
-     streamlit run broker_app.py
-     ```
-
-   - Windows: run `set ANTHROPIC_API_KEY=sk-ant-...` instead of the `export` line.
-
-5. Your browser opens at http://localhost:8501.
+3. Open the `lending-agent/agent` folder and double-click:
+   - **Mac:** `start.command`. If the Mac blocks it the first time, right-click it, choose
+     **Open**, then **Open** again.
+   - **Windows:** `start.bat`.
+4. The first time, it installs what it needs (a minute or two) and asks for your Claude API
+   key. The key is saved privately in a `.env` file in that folder, so you're only asked once.
+5. Your browser opens at http://localhost:8501. Close the black window to stop the app.
 
 ## 3. Use it
 
