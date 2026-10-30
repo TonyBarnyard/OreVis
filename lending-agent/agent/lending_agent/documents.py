@@ -1,6 +1,6 @@
 """Office-document outputs: live-formula Excel workbooks, Word credit memos, charts.
 
-Workbooks are written with formulas (not pasted values) so the subscriber can
+Workbooks are written with formulas (not pasted values) so the broker can
 change an assumption and watch every ratio update -- the same expectation a
 credit committee has of an analyst's spreadsheet.
 """
@@ -24,8 +24,9 @@ BODY = Font(name=FONT)
 KEY = PatternFill("solid", start_color="FFFF00")
 
 DISCLAIMER = ("Prepared by an AI analysis assistant for review by a qualified lending "
-              "professional. This is not a credit decision, a commitment to lend, or legal "
-              "advice. All figures must be verified against source documents.")
+              "professional. This is not a credit decision, a commitment to lend or arrange "
+              "financing, or legal advice. All figures must be verified against source "
+              "documents.")
 
 
 def build_loan_sizing_workbook(path: str | Path, deal_name: str, noi: float,
@@ -137,9 +138,9 @@ def build_credit_memo(path: str | Path, deal_name: str, sections: dict[str, str]
             doc.add_paragraph(para.strip())
     if chart_png:
         doc.add_picture(str(chart_png), width=Inches(6))
-    doc.add_heading("Decision", 1)
-    doc.add_paragraph("Approve / Decline / Approve with conditions: ____________   "
-                      "Decision maker: ____________   Date: ________")
+    doc.add_heading("Broker review", 1)
+    doc.add_paragraph("Reviewed and approved for submission by: ____________   "
+                      "Date: ________")
     path.parent.mkdir(parents=True, exist_ok=True)
     doc.save(path)
     return path

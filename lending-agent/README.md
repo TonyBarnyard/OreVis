@@ -1,7 +1,8 @@
 # LendAgent
 
-An AI analyst for commercial lending, financial planning and legal document work, sold by
-subscription. The qualified subscriber makes every lending decision.
+An AI analyst that commercial loan brokers subscribe to. It handles lending analysis,
+financial planning and legal document work. We sell software only: lenders fund and decide on
+loans, and brokers place them.
 
 - **[PLAN.md](PLAN.md)**: product, capabilities, roadmap, pricing, cost summary, regulatory checklist
 - **[SECURITY.md](SECURITY.md)**: how client data is protected

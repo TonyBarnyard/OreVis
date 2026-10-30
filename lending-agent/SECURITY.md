@@ -1,23 +1,22 @@
 # Client data protection strategy
 
-Subscribers upload the most sensitive data that exists about their borrowers: tax returns,
-Social Security numbers, bank statements, personal financial statements. Under the Gramm-Leach-
-Bliley Act this is *nonpublic personal information* (NPI), and bank and credit-union customers
-will audit how we protect it. The strategy has seven layers. Items marked **[infra]** are
+Brokers upload the most sensitive data that exists about their borrowers and guarantors: tax
+returns, Social Security numbers, bank statements, personal financial statements. Under the
+Gramm-Leach-Bliley Act this is *nonpublic personal information* (NPI). Brokers, and the lenders
+they submit to, will ask how we protect it. The strategy has seven layers. Items marked **[infra]** are
 implemented in `infra/terraform/`. Items marked **[app]** are application requirements.
 
 ## 1. Frameworks we commit to
 
 | Framework | Why | When |
 |---|---|---|
-| FTC GLBA Safeguards Rule (16 CFR 314) | We're a service provider to financial institutions | Day 1: written security program, qualified individual, risk assessment |
-| SOC 2 Type I, then Type II (Security, Confidentiality, Availability) | Banks and CUs require it in vendor due diligence | Type I by launch (month 6), Type II ~month 13 |
-| Interagency third-party risk guidance | Bank customers' examiners will ask about us | Vendor-DD package ready at launch |
+| FTC GLBA Safeguards Rule (16 CFR 314) | Brokers handle guarantors' personal financial data, and we're their service provider | Day 1: written security program, qualified individual, risk assessment |
+| SOC 2 Type I, then Type II (Security, Confidentiality, Availability) | Gives brokers and their lenders independent proof that borrower data is safe; brokerage firms will ask for it | Type I by launch (month 6), Type II ~month 13 |
 | State breach-notification laws, CCPA/CPRA | Legal obligation | Incident response plan at launch |
 
-## 2. Tenant isolation: one customer can never see another's data
+## 2. Account isolation: one broker can never see another's data
 
-- **Per-tenant encryption keys [app + infra].** Each subscriber account gets its own AWS KMS
+- **Per-tenant encryption keys [app + infra].** Each broker account gets its own AWS KMS
   key at onboarding, tagged `Project=lendagent`. The runtime role can only use tagged keys.
   All documents are encrypted with the owning tenant's key. Deleting a tenant schedules its key
   for deletion, which crypto-shreds every copy, including backups and the DR replica.
@@ -71,12 +70,12 @@ implemented in `infra/terraform/`. Items marked **[app]** are application requir
 - **Fair-lending guardrail [app].** The agent excludes ECOA prohibited-basis attributes from
   analysis and notes the exclusion. It never issues a credit decision.
 - **Human in the loop.** Every deliverable carries a "prepared for review by a qualified lending
-  professional" notice and a decision block that the subscriber signs.
+  professional" notice and a sign-off block the broker completes before anything is sent.
 - **Opaque identifiers only.** Calls to the model carry a tenant ID, never a name or email.
 
 ## 6. Access control and monitoring
 
-- **Customers [app]:** SSO (SAML/OIDC via WorkOS) for enterprise accounts, mandatory MFA for
+- **Brokers [app]:** single sign-on (SAML/OIDC via WorkOS) for brokerage-firm accounts, mandatory MFA for
   everyone, role-based access (admin / analyst / read-only), and per-deal sharing.
 - **Our staff:** no standing production access. Engineers get break-glass, time-limited roles
   that are logged and alerted. Production data is never copied to laptops or staging; staging
@@ -94,7 +93,7 @@ implemented in `infra/terraform/`. Items marked **[app]** are application requir
 - **Backups [infra]:** RDS Multi-AZ, 35-day point-in-time recovery, daily AWS Backup copies to
   us-west-2, and S3 versioning with cross-region replication to a separately keyed DR bucket.
 - **Targets:** RPO ≤ 15 minutes and RTO ≤ 4 hours. DR restore is tested quarterly.
-- **Retention:** subscriber-configurable (default: deal documents retained while the account
+- **Retention:** broker-configurable (default: deal documents retained while the account
   is active, deleted 30 days after the deal is closed out or the account terminates). Deletion
   is crypto-shredding via the tenant key, and we issue a certificate of deletion on request.
 - **Incident response:** written plan, 24-hour customer notification commitment in the DPA

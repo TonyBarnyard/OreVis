@@ -2,7 +2,7 @@
 
 The model never does arithmetic "in its head" for credit metrics: every number
 that lands in a credit memo or spreadsheet comes from these functions, so the
-output is reproducible and auditable by the subscriber who makes the decision.
+output is reproducible and auditable by the broker and the lenders they submit to.
 """
 
 from __future__ import annotations
