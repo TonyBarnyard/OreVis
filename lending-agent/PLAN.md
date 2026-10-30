@@ -10,8 +10,9 @@ loan, builds the Excel model, writes the lender-ready package, compares the term
 come back, and keeps the deal checklist current.
 
 **What the business is and isn't:**
-- **We sell software.** Brokers pay a monthly fee for the AI agent, plus 5% of the commission
-  they earn on loans they close using it. We don't supply brokers or do the brokering.
+- **We sell software.** Brokers pay a flat monthly fee for the AI agent. We take no share of
+  their commission, and we don't supply brokers or do the brokering. Each broker is
+  responsible for their own licensing and their own deals.
 - **We never lend, fund or guarantee loans.** Lenders fund the loans. Brokers place them and
   earn their commission.
 - **We don't make decisions.** Lenders make the credit decision. The broker decides what to
@@ -47,8 +48,7 @@ come back, and keeps the deal checklist current.
 - Side-by-side comparison of lender term sheets: rate, fees, amortization, prepayment,
   recourse and covenants, with the borrower's effective cost under each.
 - Borrower intake checklists and document-request emails. Deal pipeline and commission tracker.
-  The tracker records each closing and its commission (from the closing statement), which is
-  also how the 5% success fee is calculated and billed.
+  The tracker also feeds each broker's monthly value report (section 4).
 - Lender-fit notes against the broker's own lender list and criteria (the broker maintains
   the list, and the agent applies it).
 
@@ -115,37 +115,40 @@ lending expert configures it during onboarding.
 
 | Phase | Months | Deliverables |
 |---|---|---|
-| 0. Foundations | 1 | Entity, regulatory counsel memo (including the success-fee structure), AWS setup from Terraform, part-time lending expert engaged |
+| 0. Foundations | 1 | Entity, legal review of the broker agreement and disclaimers, AWS setup from Terraform, part-time lending expert engaged |
 | 1. MVP | 1–6 | One engineer builds: upload → extract → spread → sizing workbook → lender package for CRE and SBA 7(a); eval set v1 |
-| 2. Hardening | 5–8 | Per-account encryption keys, MFA, audit log, SOC 2 Type I via compliance software, pen test, broker profiles, closing and commission tracker |
-| 3. Private beta | 7–8 | 5–10 design-partner brokers, free or discounted |
-| 4. Launch | 9 | Paid plans, success-fee billing, Word/Excel add-in. Founder sells and supports the first 25 accounts |
+| 2. Hardening | 5–8 | Per-account encryption keys, MFA, audit log, SOC 2 Type I via compliance software, pen test, broker profiles, value report |
+| 3. Private beta | 7–8 | 5–10 design-partner brokers, free or discounted. Measure hours per deal before and after to prove the value numbers |
+| 4. Launch | 9 | Paid plans with a 60-day pilot, Word/Excel add-in. Founder sells and supports the first 25 accounts |
 | 5. Grow | 10–24 | Term-sheet comparison, C&I and construction, lender list management; second engineer (month 19); first support hire after 25 accounts; SOC 2 Type II |
 | 6. Brokerage firms | 24+ | Multi-broker firm accounts, CRM integrations, single sign-on |
 
-## 4. Pricing: monthly fee + 5% of commission
+## 4. Pricing: flat monthly fee, priced on value
 
-| Plan | Monthly fee | Seats | For | Expected monthly commission* | 5% success fee | Total as % of commission |
-|---|---|---|---|---|---|---|
-| Solo Broker | **$499** | 1 | Independent commercial loan broker | $22,500 (1.5 loans × $1.5M × 1%) | $1,125 | 7.2% |
-| Broker Team | **$1,499** + $500 onboarding | 3 | Broker with partners or analysts | $80,000 (4 × $2M × 1%) | $4,000 | 6.9% |
-| Brokerage Firm | **$3,999** + $2,500 onboarding | 10 | Firm of up to 10 brokers | $200,000 (8 × $2.5M × 1%) | $10,000 | 7.0% |
+No share of commission. Each plan is priced so the broker gets **at least 5×** its cost back in
+time saved plus the extra loans they can close with that time.
 
-\*Illustrative assumptions. Change them in the Pricing sheet. The success fee rate is one input
-(`success_fee_pct`).
+| Plan | Monthly fee | Seats | Time saved / mo | Extra commission / mo* | Value to broker | Broker ROI | % of broker's commission |
+|---|---|---|---|---|---|---|---|
+| Solo Broker | **$999** | 1 | $3,600 (48 hrs) | $3,750 (+1 loan a quarter) | $7,350 | **7.4×** | 4.4% |
+| Broker Team | **$2,499** + $500 onboarding | 3 | $10,800 (144 hrs) | $10,000 (+1 loan every 2 months) | $20,800 | **8.3×** | 3.1% |
+| Brokerage Firm | **$6,999** + $2,500 onboarding | 10 | $36,000 (480 hrs) | $25,000 (+1 loan a month) | $61,000 | **8.7×** | 3.5% |
 
-- **Billing:** the monthly fee by card or ACH. The success fee is invoiced when a loan closes,
-  based on the commission on the closing statement the broker uploads to the deal tracker.
-- **The model assumes only 75% of commission is reported and collected,** because not every
-  deal will run through the platform and some will be under-reported. It also assumes the
-  first closings arrive 3 months after a broker joins. Contracts need a reporting duty and
-  audit rights.
-- **What it costs the broker:** about 7% of their commission in total, against analyst time
-  saved worth about $3,600/mo for a solo broker. The fee is easier to accept because the 5% is
-  only paid when they get paid. Watch whether total cost slows sign-ups, and if it does, lower
-  the monthly fee rather than the 5%.
-- **Licensing risk (see section 6):** some states may treat a share of loan commissions as
-  broker or finder compensation. Get counsel's sign-off before the first invoice.
+\*Assumes 6 hours saved per deal at $75/hr, 8 deals worked per seat a month, and average loans
+of $1.5M / $2M / $2.5M at 1% commission. All of these are inputs in the Pricing sheet, and the
+sheet flags any plan that drops below the 5× target.
+
+**Making sure the value is real**
+1. **Measure it in the beta.** Time 5–10 design-partner brokers on real deals before and after
+   the agent. If they don't save about 6 hours a deal, fix the product or the price before
+   launch.
+2. **Show it every month.** Each broker gets a value report from the app covering hours saved,
+   deals and packages produced, and closings logged. Renewals then rest on numbers, not
+   promises.
+3. **Lower the risk of trying it.** A 60-day pilot (or the first month free) with cancel-anytime
+   terms. Annual prepay gets 2 months free.
+4. **Room to raise prices.** At the 5× floor, Solo could go up to about $1,470/mo. Raise prices
+   only once the value reports back it up, because higher prices will slow sign-ups.
 
 ## 5. What it costs (summary of `model/RESULTS.md`)
 
@@ -157,34 +160,31 @@ brokers), one founding engineer, a lending expert about one day a week, and a fr
 security contractor. A second engineer joins in month 19 and the first support rep after 25
 accounts. There are no salespeople or marketing hires.
 
-| Very lean team | **Slow growth (your plan)** | Slow, monthly fee only | Moderate growth |
+| Very lean team | **Slow growth (your plan)** | Slow, at earlier $499 pricing | Moderate growth |
 |---|---|---|---|
-| One-time setup | **$100,600** | $100,600 | $100,600 |
-| Spend before the first paying broker (launch month 9) | **$387,000** | $387,000 | $351,000 |
-| Peak operating capital needed | **$679,000** | $1.65M | $545,000 |
-| Recommended funding (+25% cushion) | **$849,000** | $2.06M | $682,000 |
-| First month with a monthly profit | **23** | beyond 36 | 14 |
+| One-time setup | **$83,400** | $83,400 | $83,400 |
+| Spend before the first paying broker (launch month 9) | **$370,000** | $370,000 | $334,000 |
+| Peak operating capital needed | **$926,000** | $1.63M | $514,000 |
+| Recommended funding (+25% cushion) | **$1.16M** | $2.04M | $643,000 |
+| First month with a monthly profit | **35** | beyond 36 | 16 |
 | Paying broker accounts, month 12 / 24 / 36 | **8 / 33 / 62** | 8 / 33 / 62 | 21 / 85 / 185 |
-| Annual revenue run-rate, month 36 | **$2.2M** | $0.8M | $7.5M |
-| Success fees as share of revenue, month 36 | **62%** | — | 61% |
+| Annual revenue run-rate, month 36 | **$1.46M** | $0.82M | $5.1M |
 
-- **The 5% fee is what makes slow growth work.** It cuts the capital needed from $1.65M to
-  $679k and brings the first monthly profit forward from beyond month 36 to month 23.
-- **How much commission you actually collect matters.** At 50% collected, the peak need is
-  about $842k and the first profit comes in month 29. At 100% it's about $609k and month 17.
+- **At slow growth, profit arrives near the end of year 3,** so plan funding for about
+  $1.2M. Faster sign-ups have the biggest effect: Moderate growth halves the capital needed.
+- **The higher prices nearly halve the capital requirement** compared with the earlier
+  $499 / $1,499 / $3,999 tiers.
 - **Monthly running costs:** servers about $2,950, security and ops software about $1,300,
   and Claude usage about $5.52 per deal analyzed.
 
 ## 6. Regulatory and legal checklist (before launch)
 
-Get regulatory counsel's opinion (budgeted at $25k in Setup) on:
+Legal review (budgeted at $10k in Setup for the very lean plan) of:
 
-1. **Our own licensing: most important, because of the 5% success fee.** A fee tied to loan
-   commissions may be treated as broker or finder compensation in some states (for example
-   under the California Financing Law), which could require us to be licensed. Ask counsel
-   which states are affected and whether a structure works. Options to discuss: licensing in
-   those states, a fixed fee per closed deal instead of a percentage, or volume-tiered monthly
-   pricing in those states. Brokers remain responsible for their own licenses.
+1. **Licensing.** We sell software on a flat monthly fee, take no share of commissions and
+   don't broker loans, so we don't expect to need a lending or broker license. The broker
+   agreement should state that brokers are responsible for their own licensing, their deals
+   and their advice to borrowers.
 2. **ECOA / Reg B and fair lending.** We exclude prohibited-basis data from analysis, and
    lenders make the credit decisions.
 3. **Unauthorized practice of law.** Legal features summarize and draft for review by
@@ -207,5 +207,5 @@ Get regulatory counsel's opinion (budgeted at $25k in Setup) on:
 | `infra/terraform/` | AWS servers: network, database, document storage, compute, WAF, monitoring, DR |
 | `agent/` | Agent code: Claude tool runner, underwriting math, Excel/Word/chart generators, tests |
 | `model/build_model.py` | Builds and runs the financial model |
-| `model/LendAgent_Financial_Model.xlsx` | The model, shipped as slow growth + very lean team. Scenario in Assumptions!F3; `team_plan`, `success_fee_pct` and the collection rate are rows in Assumptions |
+| `model/LendAgent_Financial_Model.xlsx` | The model, shipped as slow growth + very lean team. Scenario in Assumptions!F3, `team_plan` row in Assumptions, prices and value inputs on the Pricing sheet |
 | `model/RESULTS.md`, `model_charts.png` | Results of the last run |

@@ -117,14 +117,6 @@ FIXED_INPUTS = [
      "sells and supports early accounts."),
     ("ga_other", "Other G&A per month ($): software seats, travel, co-working", USD, 3000,
      "Estimate."),
-    ("Success fee on broker commission", None),
-    ("success_fee_pct", "Success fee: share of each broker commission", PCT, 0.05,
-     "Your pricing decision. Confirm with regulatory counsel (see Pricing note)."),
-    ("success_capture", "Share of broker commission reported and collected", PCT, 0.75,
-     "Assumption: not every closing runs through the platform, and some is under-reported "
-     "or uncollected. Needs reporting + audit rights in the contract."),
-    ("success_lag", "Months from a broker joining to their first closed loan", NUM, 3,
-     "Typical commercial close is 60-120 days."),
     ("Very lean overrides (used when team plan = 3)", None),
     ("vl_base_marketing", "Base marketing per month ($)", USD, 1500,
      "Website, LinkedIn content, one or two broker events a year."),
@@ -187,35 +179,41 @@ def build_assumptions(wb):
 # -------------------------------------------------------------------- Pricing
 def build_pricing(wb, A):
     ws = wb.create_sheet("Pricing")
-    title(ws, "Pricing vs. subscriber commission",
-          "Value-based check: what each tier costs relative to the commission it helps close "
-          "and the analyst time it saves.")
+    title(ws, "Pricing and value to the broker",
+          "Each plan must deliver at least the target ROI: time saved plus extra commission "
+          "from the extra loans the broker can now handle.")
     tiers = ["Solo Broker", "Broker Team", "Brokerage Firm"]
     for i, t in enumerate(tiers):
         style(ws.cell(4, 3 + i), F_BOLD, fill=FILL_HEAD).value = t
     style(ws["A4"], F_BOLD, fill=FILL_HEAD).value = "Per account, per month"
     rows = [
-        ("Target subscriber", None, ["Independent commercial loan broker", "Broker with 2-3 partners or analysts",
+        ("Target subscriber", None, ["Independent commercial loan broker",
+                                     "Broker with 2-3 partners or analysts",
                                      "Commercial brokerage firm (up to 10 brokers)"], "text"),
         ("Seats included", NUM, [1, 3, 10], "in"),
         ("Average loan size ($)", USD, [1_500_000, 2_000_000, 2_500_000], "in"),
         ("Broker fee / commission (% of loan)", '0.00%', [0.01, 0.01, 0.01], "in"),
-        ("Loans closed per month", NUM1, [1.5, 4, 8], "in"),
-        ("Expected commission per month ($)", USD, "=C7*C8*C9", "f"),
+        ("Loans closed per month today", NUM1, [1.5, 4, 8], "in"),
+        ("Broker's expected commission per month ($)", USD, "=C7*C8*C9", "f"),
         ("Deals analyzed per seat per month", NUM1, f"={A['deals_per_seat']}", "link"),
-        ("Analyst hours saved per deal analyzed", NUM1, [6, 6, 6], "in"),
+        ("Hours saved per deal analyzed", NUM1, [6, 6, 6], "in"),
         ("Value of broker/analyst time per hour ($)", USD, [75, 75, 75], "in"),
-        ("Value of time saved per month ($)", USD, "=C6*C11*C12*C13", "f"),
-        ("Recommended list price per month ($)", USD, [499, 1499, 3999], "key"),
-        ("Price as % of expected commission", PCT, "=IFERROR(C15/C10,0)", "f"),
-        ("Customer ROI on time saved alone", MULT, "=IFERROR(C14/C15,0)", "f"),
-        ("Value-based ceiling at target share ($)", USD, "=C10*$C$23", "f"),
+        ("Value 1: time saved per month ($)", USD, "=C6*C11*C12*C13", "f"),
+        ("Extra loans closed per month with the freed-up time", '0.00', [0.25, 0.5, 1.0], "in"),
+        ("Value 2: extra commission per month ($)", USD, "=C15*C7*C8", "f"),
+        ("Total value to the broker per month ($)", USD, "=C14+C16", "f"),
+        ("Monthly price ($)", USD, [999, 2499, 6999], "key"),
+        ("Broker ROI (value / price)", MULT, "=IFERROR(C17/C18,0)", "f"),
+        ("Price as % of value delivered", PCT, "=IFERROR(C18/C17,0)", "f"),
+        ("Price as % of broker's commission", PCT, "=IFERROR(C18/C10,0)", "f"),
+        ("Value check", None, '=IF(C19>=$C$27,"OK","Price too high for value")', "f"),
         ("One-time onboarding fee ($)", USD, [0, 500, 2500], "in"),
         ("Plan mix (from Assumptions)", PCT, None, "mix"),
     ]
     r = 5
     for label, fmt, val, kind in rows:
-        ws.cell(r, 1, label).font = F_BODY
+        ws.cell(r, 1, label).font = F_BOLD if label.startswith(("Total value", "Monthly price",
+                                                                  "Broker ROI")) else F_BODY
         for i in range(3):
             c = ws.cell(r, 3 + i)
             col = get_column_letter(3 + i)
@@ -231,47 +229,27 @@ def build_pricing(wb, A):
             else:
                 style(c, F_BODY, fmt).value = val.replace("C", col).replace("$" + col, "$C")
         r += 1
-    # r == 21 now
-    style(ws["A23"], F_BODY).value = "Target price as share of commission (value-based ceiling)"
-    style(ws["C23"], F_INPUT, PCT, FILL_KEY).value = 0.03
-    ws["C23"].comment = Comment("Assumption: B2B tools typically capture 2-5% of the "
-                                "revenue they influence. Keep list price below this ceiling.",
-                                "model")
-    style(ws["A25"], F_BOLD).value = "Blended (by plan mix)"
+    # r == 25 now
+    style(ws["A27"], F_BODY).value = "Minimum broker ROI for a plan to pass the value check"
+    style(ws["C27"], F_INPUT, MULT, FILL_KEY).value = 5
+    ws["C27"].comment = Comment("Assumption: B2B software usually needs to return 5-10x its "
+                                "price to sell easily and keep customers.", "model")
+    style(ws["A29"], F_BOLD).value = "Blended (by plan mix)"
     blended = [
-        ("Blended revenue per account per month (ARPA) ($)", USD, "=SUMPRODUCT(C15:E15,C20:E20)"),
-        ("Blended seats per account", NUM1, "=SUMPRODUCT(C6:E6,C20:E20)"),
-        ("Blended onboarding fee per new account ($)", USD, "=SUMPRODUCT(C19:E19,C20:E20)"),
+        ("Blended monthly fee per account (ARPA) ($)", USD, "=SUMPRODUCT(C18:E18,C24:E24)"),
+        ("Blended seats per account", NUM1, "=SUMPRODUCT(C6:E6,C24:E24)"),
+        ("Blended onboarding fee per new account ($)", USD, "=SUMPRODUCT(C23:E23,C24:E24)"),
     ]
     refs = {}
     for j, (label, fmt, f) in enumerate(blended):
-        rr = 26 + j
+        rr = 30 + j
         ws.cell(rr, 1, label).font = F_BODY
         style(ws.cell(rr, 3), F_BODY, fmt).value = f
         refs[["arpa", "seats", "onboard"][j]] = f"Pricing!$C${rr}"
-    ws.cell(29, 1, "Blended expected broker commission per account ($)").font = F_BODY
-    style(ws.cell(29, 3), F_BODY, USD).value = "=SUMPRODUCT(C10:E10,C20:E20)"
-    refs["commission"] = "Pricing!$C$29"
-
-    style(ws["A31"], F_BOLD, fill=FILL_HEAD).value = "Monthly fee + success fee"
-    fee = A["success_fee_pct"]
-    extra = [
-        ("Success fee per month at full capture ($)", USD, f"=C10*{fee}"),
-        ("Total cost to broker per month ($)", USD, "=C15+C32"),
-        ("Total as % of expected commission", PCT, "=IFERROR(C33/C10,0)"),
-        ("Customer ROI on time saved, after both fees", MULT, "=IFERROR(C14/C33,0)"),
-    ]
-    for j, (label, fmt, f) in enumerate(extra):
-        rr = 32 + j
-        ws.cell(rr, 1, label).font = F_BODY
-        for i in range(3):
-            col = get_column_letter(3 + i)
-            style(ws.cell(rr, 3 + i), F_BODY, fmt).value = f.replace("C", col)
-    style(ws["A37"], F_NOTE).value = (
-        "Regulatory note: a fee based on a share of loan commissions can make the platform look "
-        "like a broker/finder under some state lending laws (e.g. California Financing Law). "
-        "Confirm the structure with regulatory counsel before launch.")
-    ws.column_dimensions["A"].width = 52
+    style(ws["A34"], F_NOTE).value = (
+        "Flat monthly pricing only: we take no share of broker commissions. Proving the value: "
+        "the app reports each broker's hours saved and deals worked every month (see PLAN.md).")
+    ws.column_dimensions["A"].width = 56
     for col in "CDE":
         ws.column_dimensions[col].width = 24
     return refs
@@ -471,8 +449,8 @@ def build_staffing(wb):
 SETUP = [
     # item, full/lean cost, very lean cost, month
     ("Entity formation, founder/IP agreements, cap table", 6000, 3000, 1),
-    ("Regulatory counsel: licensing (incl. success-fee structure), ECOA/Reg B, UPL, state law",
-     25000, 25000, 1),
+    ("Legal review: broker agreement, disclaimers, ECOA/Reg B and UPL guardrails",
+     25000, 10000, 1),
     ("Terms of service, DPA, privacy policy, AI-use disclosures, MSA template", 12000, 8000, 2),
     ("Trademark search and filing", 3000, 1500, 2),
     ("Brand, website, product design system", 25000, 6000, 2),
@@ -548,12 +526,7 @@ def build_monthly(wb, A, P, U, infra_ref, saas_ref, staff, setup):
         None,
         ("sub_rev", "Subscription revenue", USD, lambda c, p: f"={c}{{end}}*{P['arpa']}"),
         ("onb_rev", "Onboarding fees", USD, lambda c, p: f"={c}{{new}}*{P['onboard']}"),
-        ("succ_rev", "Success fees (share of broker commission)", USD, lambda c, p:
-            f"=IF({c}{{month}}>{A['success_lag']},INDEX($C${{end}}:${last_col}${{end}},"
-            f"{c}{{month}}-{A['success_lag']}),0)*{P['commission']}*{A['success_capture']}"
-            f"*{A['success_fee_pct']}"),
-        ("rev", "Total revenue", USD, lambda c, p:
-            f"={c}{{sub_rev}}+{c}{{onb_rev}}+{c}{{succ_rev}}"),
+        ("rev", "Total revenue", USD, lambda c, p: f"={c}{{sub_rev}}+{c}{{onb_rev}}"),
         None,
         ("c_llm", "AI model usage (Claude)", USD, lambda c, p:
             f"={c}{{seats}}*({A['deals_per_seat']}*{U['llm_deal']}+{U['llm_seat']})"),
@@ -660,14 +633,12 @@ def build_summary(wb, A, P, U, R, setup_total, saas_ref, rows):
         ("Total costs in month 36", USD, f"=INDEX({R['totcost']},36)", "cost_m36"),
         ("Unit economics (per account per month)", None, None),
         ("Blended monthly fee per account", USD, f"={P['arpa']}", "arpa"),
-        ("Blended success fee per account (once closing)", USD,
-         f"={P['commission']}*{A['success_capture']}*{A['success_fee_pct']}", "succ_fee"),
         ("AI + OCR + hosting variable cost per account", USD,
          f"={P['seats']}*({A['deals_per_seat']}*({U['llm_deal']}+{U['c_ocr']})+{U['llm_seat']}"
          f"+{A['infra_var_seat']})+{A['kms_per_account']}", "var_cost"),
         ("Claude AI cost per deal analyzed", USD2, f"={U['llm_deal']}", "llm_deal"),
         ("Contribution after variable costs and card fees", USD,
-         f"=({{arpa}}+{{succ_fee}})*(1-{A['payment_pct']})-{{var_cost}}", "contribution"),
+         f"={{arpa}}*(1-{A['payment_pct']})-{{var_cost}}", "contribution"),
         ("Customer lifetime (months) = 1 / churn", NUM1, f"=1/{A['churn']}", "lifetime"),
         ("Lifetime value (LTV)", USD, "={contribution}*{lifetime}", "ltv"),
         ("Customer acquisition cost (CAC)", USD, f"={A['cac']}", "cac"),
@@ -680,9 +651,7 @@ def build_summary(wb, A, P, U, R, setup_total, saas_ref, rows):
         ("Paying accounts - month 24", NUM, f"=INDEX({R['end']},24)", "acc_m24"),
         ("Paying accounts - month 36", NUM, f"=INDEX({R['end']},36)", "acc_m36"),
         ("Annual recurring revenue (ARR) - month 36", USD,
-         f"=(INDEX({R['sub_rev']},36)+INDEX({R['succ_rev']},36))*12", "arr_m36"),
-        ("Success fees as share of month-36 revenue", PCT,
-         f"=IFERROR(INDEX({R['succ_rev']},36)/INDEX({R['rev']},36),0)", "succ_share"),
+         f"=INDEX({R['sub_rev']},36)*12", "arr_m36"),
         ("Annual results", None, None),
         ("Revenue - Year 1", USD, f"=SUMIF({R['year']},1,{R['rev']})", "rev_y1"),
         ("Revenue - Year 2", USD, f"=SUMIF({R['year']},2,{R['rev']})", "rev_y2"),
@@ -693,12 +662,12 @@ def build_summary(wb, A, P, U, R, setup_total, saas_ref, rows):
         ("Gross margin - Year 3", PCT,
          f"=IFERROR(SUMIF({R['year']},3,{R['gp']})/SUMIF({R['year']},3,{R['rev']}),0)", "gm_y3"),
         ("Pricing check", None, None),
-        ("Solo Broker: monthly fee + success fee as % of commission", PCT, "=Pricing!$C$34",
-         "pct_starter"),
-        ("Broker Team: monthly fee + success fee as % of commission", PCT, "=Pricing!$D$34",
-         "pct_pro"),
-        ("Brokerage Firm: monthly fee + success fee as % of commission", PCT, "=Pricing!$E$34",
-         "pct_ent"),
+        ("Solo Broker: broker ROI (value / price)", MULT, "=Pricing!$C$19", "roi_starter"),
+        ("Broker Team: broker ROI (value / price)", MULT, "=Pricing!$D$19", "roi_pro"),
+        ("Brokerage Firm: broker ROI (value / price)", MULT, "=Pricing!$E$19", "roi_ent"),
+        ("Solo Broker: price as % of commission", PCT, "=Pricing!$C$21", "pct_starter"),
+        ("Broker Team: price as % of commission", PCT, "=Pricing!$D$21", "pct_pro"),
+        ("Brokerage Firm: price as % of commission", PCT, "=Pricing!$E$21", "pct_ent"),
     ]
     r = 5
     cells = {}
@@ -784,8 +753,7 @@ def build() -> dict:
     wb.save(OUT)
     def cell(ref):
         return ref.split("!")[1].replace("$", "")
-    return {"cells": cells, "rows": rows, "team_cell": cell(A["team_plan"]),
-            "fee_cell": cell(A["success_fee_pct"])}
+    return {"cells": cells, "rows": rows, "team_cell": cell(A["team_plan"])}
 
 
 # ---------------------------------------------------------------- recalc/run
@@ -803,22 +771,25 @@ def recalc(path: Path) -> dict:
     return {"status": "unverified"}
 
 
-# (label, growth scenario, team plan, success fee)
+# (label, growth scenario, team plan, price override for the three plans)
 RUNS = (
-    ("Slow growth (your plan)", 1, 3, 0.05),
-    ("Slow growth, monthly fee only", 1, 3, 0.0),
-    ("Moderate growth", 2, 3, 0.05),
-    ("Faster growth", 3, 3, 0.05),
+    ("Slow growth (your plan)", 1, 3, None),
+    ("Slow growth at earlier $499 / $1,499 / $3,999", 1, 3, (499, 1499, 3999)),
+    ("Moderate growth", 2, 3, None),
+    ("Faster growth", 3, 3, None),
 )
 
 
 def run_scenarios(meta: dict) -> dict:
     results = {}
-    for i, (label, scen, team, fee) in enumerate(RUNS):
+    for i, (label, scen, team, prices) in enumerate(RUNS):
         tmp = HERE / f".scenario_{i}.xlsx"
         wb = load_workbook(OUT)
         ws = wb["Assumptions"]
-        ws["F3"], ws[meta["team_cell"]], ws[meta["fee_cell"]] = scen, team, fee
+        ws["F3"], ws[meta["team_cell"]] = scen, team
+        if prices:
+            for col, price in zip("CDE", prices):
+                wb["Pricing"][f"{col}18"] = price
         wb.save(tmp)
         check = recalc(tmp)
         if check.get("status") != "success":
@@ -829,8 +800,7 @@ def run_scenarios(meta: dict) -> dict:
         m = vals["Monthly"]
         res["series"] = {key: [m.cell(meta["rows"][key], FIRST_COL + j).value
                                for j in range(MONTHS)]
-                         for key in ("rev", "sub_rev", "succ_rev", "totcost", "ebitda", "cum",
-                                     "end")}
+                         for key in ("rev", "totcost", "ebitda", "cum", "end")}
         results[label] = res
         if i == 0:
             final = tmp  # ship the user's plan with computed values cached
@@ -857,14 +827,12 @@ def _table(results: dict) -> list[str]:
         ("Security & ops software per month", "saas", usd),
         ("Claude AI cost per deal analyzed", "llm_deal", lambda v: f"${v:,.2f}"),
         ("Blended monthly fee per broker account", "arpa", usd),
-        ("Blended success fee per account once closing", "succ_fee", usd),
         ("Variable cost per account / month", "var_cost", usd),
         ("LTV / CAC", "ltv_cac", lambda v: f"{v:.1f}x"),
         ("First month with a monthly profit (EBITDA)", "breakeven_month", month),
         ("Month all money spent is earned back", "cash_payback_month", month),
         ("Paying broker accounts - month 12 / 24 / 36", None, None),
         ("Annual revenue run-rate at month 36", "arr_m36", usd),
-        ("Success fees as share of month-36 revenue", "succ_share", lambda v: f"{v:.0%}"),
         ("Revenue Y1 / Y2 / Y3", None, None),
         ("EBITDA Y1 / Y2 / Y3", None, None),
         ("Gross margin Y3", "gm_y3", lambda v: f"{v:.0%}"),
@@ -891,18 +859,22 @@ def write_report(results: dict):
     p = results[RUNS[0][0]]
     out = ["# Financial model results", "",
            "Generated by `build_model.py` from `LendAgent_Financial_Model.xlsx`, recalculated in "
-           "LibreOffice for each case. All cases use the **very lean team**, and pricing is "
-           "**a monthly fee plus 5% of broker commission** unless noted.", "",
+           "LibreOffice for each case. All cases use the **very lean team** and **flat monthly "
+           "pricing** ($999 / $2,499 / $6,999) with no share of broker commission, unless noted.",
+           "",
            "Capital figures are **operating money for the software business** (salaries, "
            "servers, AI usage, marketing) until revenue covers costs. The business never lends "
            "or funds loans.", ""] + _table(results) + [
-           "", "## What a broker pays (monthly fee + 5% of commission)", "",
-           f"- Solo Broker: $499/mo + 5% = {p['pct_starter']:.1%} of expected commission",
-           f"- Broker Team: $1,499/mo + 5% = {p['pct_pro']:.1%} of expected commission",
-           f"- Brokerage Firm: $3,999/mo + 5% = {p['pct_ent']:.1%} of expected commission", "",
-           "Success-fee revenue assumes 75% of broker commission is reported and collected, "
-           "starting 3 months after a broker joins. The full and lean team plans are still in "
-           "the workbook (team_plan row in Assumptions).", ""]
+           "", "## Value to the broker (does each plan pay for itself?)", "",
+           f"- Solo Broker $999/mo: returns {p['roi_starter']:.1f}x its price "
+           f"({p['pct_starter']:.1%} of the broker's commission)",
+           f"- Broker Team $2,499/mo: returns {p['roi_pro']:.1f}x its price "
+           f"({p['pct_pro']:.1%} of commission)",
+           f"- Brokerage Firm $6,999/mo: returns {p['roi_ent']:.1f}x its price "
+           f"({p['pct_ent']:.1%} of commission)", "",
+           "Value = hours saved (6 per deal at $75/hr) + commission on the extra loans the "
+           "broker can close with that time (0.25 / 0.5 / 1 extra loan a month). The target is "
+           "at least 5x. See the Pricing sheet.", ""]
     (HERE / "RESULTS.md").write_text("\n".join(out))
     _charts(results)
 
@@ -917,9 +889,8 @@ def _charts(results):
     months = list(range(1, MONTHS + 1))
     fig, axes = plt.subplots(1, 2, figsize=(13, 4.5))
     main = results[RUNS[0][0]]["series"]
-    axes[0].stackplot(months, main["sub_rev"], main["succ_rev"],
-                      labels=["Monthly fees", "5% success fees"],
-                      colors=["#1f4e79", "#6fa8dc"])
+    axes[0].fill_between(months, main["rev"], color="#1f4e79", alpha=0.85,
+                         label="Revenue (monthly fees)")
     axes[0].plot(months, main["totcost"], label="Total costs", color="#333333", lw=2)
     axes[0].set_title("Your plan (slow growth, very lean): revenue vs. costs")
     axes[0].legend(frameon=False, loc="upper left")
