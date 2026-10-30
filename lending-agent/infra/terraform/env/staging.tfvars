@@ -1,0 +1,12 @@
+environment          = "staging"
+vpc_cidr             = "10.41.0.0/16"
+az_count             = 2
+db_instance_class    = "db.t4g.medium"
+db_multi_az          = false
+api_desired_count    = 1
+worker_desired_count = 1
+domain_name          = "staging.example.com" # replace
+acm_certificate_arn  = "arn:aws:acm:us-east-1:000000000000:certificate/replace-me"
+api_image            = "000000000000.dkr.ecr.us-east-1.amazonaws.com/lendagent-staging-api@sha256:replace"
+worker_image         = "000000000000.dkr.ecr.us-east-1.amazonaws.com/lendagent-staging-worker@sha256:replace"
+alarm_email          = "security@example.com" # replace
