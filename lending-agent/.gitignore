@@ -1,0 +1,10 @@
+.terraform/
+.terraform.lock.hcl
+*.tfstate*
+__pycache__/
+.pytest_cache/
+agent/workspace/
+model/.scenario_*.xlsx
+data/
+agent/.env
+agent/.venv/
