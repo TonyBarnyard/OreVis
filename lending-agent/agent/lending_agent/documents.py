@@ -115,6 +115,28 @@ def build_loan_sizing_workbook(path: str | Path, deal_name: str, noi: float,
     return path
 
 
+def build_spreadsheet(path: str | Path, sheets: dict[str, list[list]]) -> Path:
+    """General workbook: {sheet name: rows}. Strings starting with "=" are formulas."""
+    path = Path(path)
+    wb = Workbook()
+    wb.remove(wb.active)
+    for name, rows in sheets.items():
+        ws = wb.create_sheet(str(name)[:31])
+        for r, row in enumerate(rows, start=1):
+            for c, value in enumerate(row, start=1):
+                cell = ws.cell(r, c, value)
+                cell.font = BOLD if r == 1 else BODY
+                if isinstance(value, (int, float)) and not isinstance(value, bool):
+                    cell.number_format = "#,##0.00" if abs(value) < 10 else "#,##0"
+        for col in ws.columns:
+            width = max((len(str(c.value)) for c in col if c.value is not None), default=8)
+            ws.column_dimensions[col[0].column_letter].width = min(max(width + 2, 10), 60)
+        ws.freeze_panes = "A2"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    wb.save(path)
+    return path
+
+
 def build_credit_memo(path: str | Path, deal_name: str, sections: dict[str, str],
                       metrics: dict[str, str] | None = None,
                       chart_png: str | Path | None = None) -> Path:

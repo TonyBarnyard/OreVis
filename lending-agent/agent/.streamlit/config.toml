@@ -1,0 +1,13 @@
+[client]
+toolbarMode = "viewer"   # hide developer menus from the broker
+
+[server]
+maxUploadSize = 200      # MB per file
+enableXsrfProtection = true
+
+[browser]
+gatherUsageStats = false
+
+[theme]
+primaryColor = "#1f4e79"
+font = "sans serif"

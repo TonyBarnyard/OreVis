@@ -152,6 +152,20 @@ def build_tools(workspace: Path) -> list:
         return f"Saved {p.name}"
 
     @beta_tool
+    def create_spreadsheet(filename: str, sheets_json: str) -> str:
+        """Write a general Excel workbook: financial spreads, rent rolls, checklists, term-sheet
+        comparisons, pipeline lists. Use formulas (strings starting with "=") for totals and
+        ratios so the broker can audit them.
+
+        Args:
+            filename: Output file name ending in .xlsx.
+            sheets_json: JSON object mapping sheet name to a list of rows; each row is a list of
+                cell values (text, numbers, or formulas like "=SUM(B2:B10)"). Row 1 is the header.
+        """
+        p = documents.build_spreadsheet(_safe_path(filename), json.loads(sheets_json))
+        return f"Saved {p.name}"
+
+    @beta_tool
     def create_chart(filename: str, title: str, labels: list[str], values: list[float],
                      kind: str = "bar", y_label: str = "") -> str:
         """Render a bar or line chart to PNG for a memo or presentation.
@@ -187,7 +201,7 @@ def build_tools(workspace: Path) -> list:
         return f"Saved {p.name}"
 
     return [size_loan, credit_metrics, stress_test, global_cash_flow,
-            create_loan_workbook, create_chart, create_credit_memo]
+            create_loan_workbook, create_spreadsheet, create_chart, create_credit_memo]
 
 
 def run(prompt: str, workspace: str | Path, tenant_id: str) -> str:

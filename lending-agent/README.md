@@ -1,23 +1,34 @@
 # LendAgent
 
-An AI analyst that commercial loan brokers subscribe to. It handles lending analysis,
-financial planning and legal document work. We sell software only: lenders fund and decide on
-loans, and brokers place them.
+An AI analyst for commercial loan brokers: upload a deal's documents, ask for work in plain
+English, and download Excel models and Word loan packages. Built as a side line by two
+partners. One partner is a broker who uses it and improves it, and later we sell access to
+other brokers.
 
-- **[PLAN.md](PLAN.md)**: product, capabilities, roadmap, pricing, cost summary, regulatory checklist
-- **[SECURITY.md](SECURITY.md)**: how client data is protected
-- **[model/RESULTS.md](model/RESULTS.md)**: financial model results (3 scenarios)
+## Start here: the one-broker start-up version
 
-## Run things
+**[agent/START_HERE.md](agent/START_HERE.md)** covers getting a Claude key, running the app,
+and using it on a deal.
 
 ```bash
-# Agent: tests, then a live run (needs ANTHROPIC_API_KEY or AWS Bedrock access)
-cd agent && pip install -r requirements.txt && python -m pytest -q
-python -m lending_agent.agent "NOI $410k, value $5.2M, request $3.6M at 7.1%, 25-yr am, 10-yr term. Size it, stress it, and write the workbook and memo."
-
-# Financial model: rebuilds the workbook, recalculates every scenario (needs LibreOffice)
-cd model && python build_model.py
-
-# Servers
-cd infra/terraform && terraform init && terraform plan -var-file=env/staging.tfvars
+cd agent && pip install -r requirements.txt
+ANTHROPIC_API_KEY=sk-ant-... streamlit run broker_app.py
 ```
+
+| Path | What it is |
+|---|---|
+| `agent/broker_app.py` | The web page: deals, document upload, chat, downloads |
+| `agent/lending_agent/deals.py` | Deal storage and the conversation with Claude |
+| `agent/lending_agent/agent.py` | The agent's instructions and tools |
+| `agent/lending_agent/underwriting.py` | Loan maths: DSCR, LTV, debt yield, sizing, stress tests |
+| `agent/lending_agent/documents.py` | Excel, Word and chart generators |
+| `agent/tests/` | Tests (`python -m pytest -q`) |
+
+## Later: selling access to other brokers
+
+These describe the multi-broker version. None of it is needed to start.
+
+- **[PLAN.md](PLAN.md)**: product, roadmap, pricing, costs
+- **[SECURITY.md](SECURITY.md)**: how client data is protected once there are many brokers
+- **[model/RESULTS.md](model/RESULTS.md)**: financial model for the business
+- `infra/terraform/`: AWS servers for the multi-broker version

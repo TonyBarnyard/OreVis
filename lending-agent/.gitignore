@@ -5,3 +5,4 @@ __pycache__/
 .pytest_cache/
 agent/workspace/
 model/.scenario_*.xlsx
+data/
