@@ -1,6 +1,9 @@
 # LendAgent: business and build plan
 
-*Working name. An AI analyst that commercial loan brokers subscribe to.*
+*Working name. An AI analyst that commercial loan brokers subscribe to. Run as a side line
+by two partners working from home: one is a commercial loan broker who uses the agent on real
+deals and keeps improving it. Apart from that partner's own deals, the business doesn't
+broker loans. It sells access to the agent.*
 
 ## 1. What we're building
 
@@ -111,17 +114,15 @@ lending expert configures it during onboarding.
   spreads, graded by our lending expert. Every prompt or model change must pass it before
   release.
 
-## 3. Roadmap (very lean, slow growth)
+## 3. Roadmap (side line, slow growth)
 
 | Phase | Months | Deliverables |
 |---|---|---|
-| 0. Foundations | 1 | Entity, legal review of the broker agreement and disclaimers, AWS setup from Terraform, part-time lending expert engaged |
-| 1. MVP | 1–6 | One engineer builds: upload → extract → spread → sizing workbook → lender package for CRE and SBA 7(a); eval set v1 |
-| 2. Hardening | 5–8 | Per-account encryption keys, MFA, audit log, SOC 2 Type I via compliance software, pen test, broker profiles, value report |
-| 3. Private beta | 7–8 | 5–10 design-partner brokers, free or discounted. Measure hours per deal before and after to prove the value numbers |
-| 4. Launch | 9 | Paid plans with a 60-day pilot, Word/Excel add-in. Founder sells and supports the first 25 accounts |
-| 5. Grow | 10–24 | Term-sheet comparison, C&I and construction, lender list management; second engineer (month 19); first support hire after 25 accounts; SOC 2 Type II |
-| 6. Brokerage firms | 24+ | Multi-broker firm accounts, CRM integrations, single sign-on |
+| 0. Foundations | 1 | LLC and partner operating agreement (ownership, IP, who does what), legal review of the broker agreement, hire a contract developer, AWS setup from Terraform (`env/sideline.tfvars`) |
+| 1. MVP | 1–6 | Developer delivers in three paid milestones: (1) document intake and extraction, (2) analysis, Excel workbook and loan package, (3) security hardening, billing and launch. The broker partner tests every milestone on real deals |
+| 2. Private beta | 6–8 | The partner plus 5–10 brokers from the partner's network, free. Measure hours saved per deal |
+| 3. Launch | 9 | Paid plans with a 60-day pilot. Partners sell and support the first 40 accounts |
+| 4. Grow | 10–36 | Developer continues part-time ($4k/mo) on improvements the partner and customers ask for. First paid support hire after 40 accounts. SOC 2 audit when brokerage firms start asking |
 
 ## 4. Pricing: flat monthly fee, priced on value
 
@@ -152,34 +153,37 @@ sheet flags any plan that drops below the 5× target.
 
 ## 5. What it costs (summary of `model/RESULTS.md`)
 
-The capital below is **operating money for the software company**: salaries, servers, AI
-usage and marketing until revenue covers costs. **None of it funds loans.**
+The capital below is **operating money for the software business**: the developer, servers,
+AI usage, insurance and marketing until revenue covers costs. **None of it funds loans.**
 
-**Very lean team:** you (unpaid for the first 24 months, selling and supporting the first 25
-brokers), one founding engineer, a lending expert about one day a week, and a fractional
-security contractor. A second engineer joins in month 19 and the first support rep after 25
-accounts. There are no salespeople or marketing hires.
+**Side line team:** two partners working from home with **no salaries**. The broker partner
+tests the agent, improves it and brings in the first brokers. A contract developer builds the
+first version ($60k in three milestones), then works part-time for $4k/mo. A part-time
+security contractor costs $1.5k/mo. The partners handle support until there are 40 accounts.
+The servers use a smaller setup (about $850/mo) with the same security controls.
 
-| Very lean team | **Slow growth (your plan)** | Slow, at earlier $499 pricing | Moderate growth |
-|---|---|---|---|
-| One-time setup | **$83,400** | $83,400 | $83,400 |
-| Spend before the first paying broker (launch month 9) | **$370,000** | $370,000 | $334,000 |
-| Peak operating capital needed | **$926,000** | $1.63M | $514,000 |
-| Recommended funding (+25% cushion) | **$1.16M** | $2.04M | $643,000 |
-| First month with a monthly profit | **35** | beyond 36 | 16 |
-| Paying broker accounts, month 12 / 24 / 36 | **8 / 33 / 62** | 8 / 33 / 62 | 21 / 85 / 185 |
-| Annual revenue run-rate, month 36 | **$1.46M** | $0.82M | $5.1M |
+| Side line | **Slow growth (your plan)** | Moderate growth | Slow, at earlier $499 pricing | Self-built (no contract developer) |
+|---|---|---|---|---|
+| One-time setup (incl. $60k MVP build) | **$95,000** | $95,000 | $95,000 | $26,000 |
+| Spend before the first paying broker (launch month 9) | **$137,000** | $128,000 | $137,000 | — |
+| Peak operating money needed | **$148,000** | $132,000 | $166,000 | ~$67,000 |
+| Funding with a 25% cushion | **$185,000** | $165,000 | $207,000 | ~$83,000 |
+| First month with a monthly profit | **12** | 9 | 15 | 11 |
+| Month all the money spent is earned back | **21** | 14 | 29 | — |
+| Paying broker accounts, month 12 / 24 / 36 | **8 / 33 / 62** | 21 / 85 / 185 | 8 / 33 / 62 | 8 / 33 / 62 |
+| Profit before partner pay, year 2 / year 3 | **$297k / $725k** | $1.0M / $2.8M | $83k / $242k | — |
 
-- **At slow growth, profit arrives near the end of year 3,** so plan funding for about
-  $1.2M. Faster sign-ups have the biggest effect: Moderate growth halves the capital needed.
-- **The higher prices nearly halve the capital requirement** compared with the earlier
-  $499 / $1,499 / $3,999 tiers.
-- **Monthly running costs:** servers about $2,950, security and ops software about $1,300,
-  and Claude usage about $5.52 per deal analyzed.
+- **Profit means what's left for the two partners to split.** The model pays no partner
+  salaries.
+- **The developer is the biggest cost.** If one of you builds it with AI coding tools (about
+  $1k/mo in tools), the peak need falls to about $67k.
+- **Monthly running costs at launch:** servers about $850, software about $600, developer
+  $4,000, security contractor $1,500, insurance about $800, and Claude usage about $5.52 per
+  deal.
 
 ## 6. Regulatory and legal checklist (before launch)
 
-Legal review (budgeted at $10k in Setup for the very lean plan) of:
+Legal review (budgeted at $6k in Setup for the side line, plus $2.5k for the LLC and partner operating agreement) of:
 
 1. **Licensing.** We sell software on a flat monthly fee, take no share of commissions and
    don't broker loans, so we don't expect to need a lending or broker license. The broker
@@ -207,5 +211,5 @@ Legal review (budgeted at $10k in Setup for the very lean plan) of:
 | `infra/terraform/` | AWS servers: network, database, document storage, compute, WAF, monitoring, DR |
 | `agent/` | Agent code: Claude tool runner, underwriting math, Excel/Word/chart generators, tests |
 | `model/build_model.py` | Builds and runs the financial model |
-| `model/LendAgent_Financial_Model.xlsx` | The model, shipped as slow growth + very lean team. Scenario in Assumptions!F3, `team_plan` row in Assumptions, prices and value inputs on the Pricing sheet |
+| `model/LendAgent_Financial_Model.xlsx` | The model, shipped as side line + slow growth. Scenario in Assumptions!F3, `team_plan` row in Assumptions, prices and value inputs on the Pricing sheet |
 | `model/RESULTS.md`, `model_charts.png` | Results of the last run |

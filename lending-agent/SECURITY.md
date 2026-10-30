@@ -11,7 +11,7 @@ implemented in `infra/terraform/`. Items marked **[app]** are application requir
 | Framework | Why | When |
 |---|---|---|
 | FTC GLBA Safeguards Rule (16 CFR 314) | Brokers handle guarantors' personal financial data, and we're their service provider | Day 1: written security program, qualified individual, risk assessment |
-| SOC 2 Type I, then Type II (Security, Confidentiality, Availability) | Gives brokers and their lenders independent proof that borrower data is safe; brokerage firms will ask for it | Type I by launch (month 6), Type II ~month 13 |
+| SOC 2 Type I, then Type II (Security, Confidentiality, Availability) | Gives brokers and their lenders independent proof that borrower data is safe; brokerage firms will ask for it | Side line: controls built from day 1, independent pen test before launch, formal audit once brokerage firms require it |
 | State breach-notification laws, CCPA/CPRA | Legal obligation | Incident response plan at launch |
 
 ## 2. Account isolation: one broker can never see another's data
@@ -108,6 +108,6 @@ implemented in `infra/terraform/`. Items marked **[app]** are application requir
 - [ ] Per-tenant KMS key creation and RLS policies implemented and tested
 - [ ] PII masking, injection-defense tests and fair-lending tests in the eval suite
 - [ ] Independent penetration test passed, and findings remediated
-- [ ] SOC 2 Type I report issued
+- [ ] SOC 2 Type I report issued (side line: once brokerage firms require it)
 - [ ] DPA, MSA and privacy policy reviewed by counsel
 - [ ] Cyber and tech E&O insurance bound

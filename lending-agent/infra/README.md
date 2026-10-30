@@ -18,7 +18,8 @@ and security alerting. `terraform validate` passes. It has not been applied to a
    `terraform init && terraform plan -var-file=env/staging.tfvars -out=plan && terraform apply plan`
 5. Build and push the `api` and `worker` images to the ECR repos in the outputs, pin them by
    digest in the tfvars, and apply again.
-6. Repeat for prod with `env/prod.tfvars`.
+6. Repeat for prod with `env/sideline.tfvars` (smaller, about $850/month) to launch, and
+   move to `env/prod.tfvars` when usage grows.
 
 Estimated cost: about $2,950/month for prod + staging + DR at launch scale (itemized in the
 model's Infrastructure sheet).

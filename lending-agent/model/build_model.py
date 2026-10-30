@@ -112,9 +112,10 @@ FIXED_INPUTS = [
     ("compliance_recurring", "SOC 2 Type II + annual pen test + audits, per month ($)", USD, 5000,
      "~$60k/yr once on annual SOC 2 Type II cycle."),
     ("compliance_start", "Month recurring compliance costs begin", NUM, 13, "After Type I."),
-    ("team_plan", "Team plan: 1 = Full, 2 = Lean, 3 = Very lean (see Staffing)", NUM, 3,
-     "Very lean = founder + one engineer, fractional lending expert and security, founder "
-     "sells and supports early accounts."),
+    ("team_plan", "Team plan: 1 = Full, 2 = Lean, 3 = Very lean, 4 = Side line (see Staffing)",
+     NUM, 4,
+     "Side line = two partners working from home with no salaries; contract developer "
+     "builds and maintains the agent; the broker partner tests and improves it."),
     ("ga_other", "Other G&A per month ($): software seats, travel, co-working", USD, 3000,
      "Estimate."),
     ("Very lean overrides (used when team plan = 3)", None),
@@ -126,6 +127,19 @@ FIXED_INPUTS = [
      "Smaller-firm SOC 2 Type II + pen test pricing."),
     ("vl_support_threshold", "Founder handles support until accounts exceed", NUM, 25,
      "First support hire after this many paying accounts."),
+    ("Side line overrides (used when team plan = 4)", None),
+    ("sl_base_marketing", "Base marketing per month ($)", USD, 500,
+     "Website and LinkedIn; the broker partner's network does most of the selling."),
+    ("sl_cac", "Cost to win each new broker ($)", USD, 1000,
+     "Referrals from the partner's network, a free trial, the odd event or ad."),
+    ("sl_prof_services", "Bookkeeping, tax and legal per month ($)", USD, 800, "Estimate."),
+    ("sl_ga_other", "Other G&A per month ($)", USD, 300, "Software seats; both work from home."),
+    ("sl_insurance", "Insurance per month: cyber + tech E&O ($)", USD, 800,
+     "Smaller limits to start; raise when brokerage firms sign up."),
+    ("sl_compliance", "Annual pen test and security review, per month ($)", USD, 1000,
+     "Formal SOC 2 audit deferred until brokerage firms ask for it."),
+    ("sl_support_threshold", "Partners handle support until accounts exceed", NUM, 40,
+     "First paid support hire after this many paying accounts."),
 ]
 
 
@@ -333,19 +347,23 @@ def _replace_name(formula, name, ref):
 
 # ------------------------------------------------------------- Infrastructure
 INFRA = [
-    ("ECS Fargate - API (3 x 1 vCPU / 2 GB, ARM)", 90, "Graviton Fargate ~$30/task-month."),
-    ("ECS Fargate - workers (4 x 2 vCPU / 4 GB, ARM)", 240, "Autoscale 4-20 tasks."),
-    ("RDS PostgreSQL Multi-AZ db.r6g.large + 200 GB gp3", 420, "Encrypted, 35-day PITR."),
-    ("NAT gateways (3 AZ) + data processing", 150, "$0.045/hr each + $0.045/GB."),
-    ("Interface VPC endpoints (8 services x 3 AZ)", 180, "~$7.30 per endpoint per AZ."),
-    ("Application Load Balancer + WAF", 90, "WAF $5/ACL + $1/rule + requests."),
-    ("S3 documents + DR replica + audit (Object Lock)", 120, "Grows with tenants."),
-    ("KMS platform keys + API requests", 40, "Per-tenant keys are in variable costs."),
-    ("CloudTrail data events, GuardDuty, Security Hub, Inspector", 350, "Security monitoring."),
-    ("CloudWatch logs and metrics (400-day retention)", 250, ""),
-    ("AWS Backup + cross-region RDS backup copies", 120, "DR region us-west-2."),
-    ("Staging environment (2 AZ, single-AZ DB)", 600, ""),
-    ("AWS Business Support", 300, "Greater of $100 or ~10% of spend."),
+    # item, production $/mo, side-line $/mo (smaller footprint), note
+    ("ECS Fargate - API (3 x 1 vCPU / 2 GB, ARM)", 90, 30, "Side line: 1 task."),
+    ("ECS Fargate - workers (4 x 2 vCPU / 4 GB, ARM)", 240, 60, "Side line: 1-2 tasks."),
+    ("RDS PostgreSQL Multi-AZ db.r6g.large + 200 GB gp3", 420, 140,
+     "Side line: db.t4g.medium Multi-AZ. Encrypted, 35-day PITR."),
+    ("NAT gateways (3 AZ) + data processing", 150, 75, "Side line: 2 AZ."),
+    ("Interface VPC endpoints (8 services x 3 AZ)", 180, 120, "~$7.30 per endpoint per AZ."),
+    ("Application Load Balancer + WAF", 90, 45, "WAF $5/ACL + $1/rule + requests."),
+    ("S3 documents + DR replica + audit (Object Lock)", 120, 30, "Grows with tenants."),
+    ("KMS platform keys + API requests", 40, 20, "Per-tenant keys are in variable costs."),
+    ("CloudTrail data events, GuardDuty, Security Hub, Inspector", 350, 100,
+     "Security monitoring."),
+    ("CloudWatch logs and metrics (400-day retention)", 250, 60, ""),
+    ("AWS Backup + cross-region RDS backup copies", 120, 40, "DR region us-west-2."),
+    ("Staging environment (2 AZ, single-AZ DB)", 600, 100,
+     "Side line: started only when testing."),
+    ("AWS support plan", 300, 29, "Side line: Developer plan."),
 ]
 SAAS = [
     # item, full/lean $ per month, very lean $ per month, note
@@ -357,6 +375,7 @@ SAAS = [
     ("Endpoint management (MDM) + password manager", 300, 100, "Laptops are in scope for SOC 2."),
     ("E-signature, email, productivity suite", 300, 100, ""),
 ]
+SAAS_SIDE_LINE = [300, 100, 0, 50, 50, 50, 50]  # same order as SAAS
 
 
 def build_infra(wb, A):
@@ -366,36 +385,44 @@ def build_infra(wb, A):
     style(ws["A4"], F_BOLD, fill=FILL_HEAD).value = "AWS line item"
     style(ws["C4"], F_BOLD, fill=FILL_HEAD).value = "$ / month"
     style(ws["D4"], F_BOLD, fill=FILL_HEAD).value = "Note"
+    style(ws["F4"], F_BOLD, fill=FILL_HEAD).value = "Side line $ / month"
     r = 5
-    for label, v, note in INFRA:
+    for label, v, sl, note in INFRA:
         ws.cell(r, 1, label).font = F_BODY
         style(ws.cell(r, 3), F_INPUT, USD).value = v
+        style(ws.cell(r, 6), F_INPUT, USD).value = sl
         style(ws.cell(r, 4), F_NOTE).value = note
         r += 1
     style(ws.cell(r, 1), F_BOLD).value = "Hosting baseline total"
     style(ws.cell(r, 3), F_BOLD, USD).value = f"=SUM(C5:C{r - 1})"
-    infra_ref = f"Infrastructure!$C${r}"
+    style(ws.cell(r, 6), F_BOLD, USD).value = f"=SUM(F5:F{r - 1})"
+    infra_ref = (f"IF({A['team_plan']}=4,Infrastructure!$F${r},Infrastructure!$C${r})")
     r += 2
     style(ws.cell(r, 1), F_BOLD, fill=FILL_HEAD).value = "Security and operations SaaS"
     style(ws.cell(r, 3), F_BOLD, fill=FILL_HEAD).value = "Full / lean"
     style(ws.cell(r, 5), F_BOLD, fill=FILL_HEAD).value = "Very lean"
+    style(ws.cell(r, 6), F_BOLD, fill=FILL_HEAD).value = "Side line"
     r += 1
     s0 = r
-    for label, v, vl, note in SAAS:
+    for (label, v, vl, note), sl in zip(SAAS, SAAS_SIDE_LINE):
         ws.cell(r, 1, label).font = F_BODY
         style(ws.cell(r, 3), F_INPUT, USD).value = v
         style(ws.cell(r, 4), F_NOTE).value = note
         style(ws.cell(r, 5), F_INPUT, USD).value = vl
+        style(ws.cell(r, 6), F_INPUT, USD).value = sl
         r += 1
     style(ws.cell(r, 1), F_BOLD).value = "SaaS tooling total"
     style(ws.cell(r, 3), F_BOLD, USD).value = f"=SUM(C{s0}:C{r - 1})"
     style(ws.cell(r, 5), F_BOLD, USD).value = f"=SUM(E{s0}:E{r - 1})"
+    style(ws.cell(r, 6), F_BOLD, USD).value = f"=SUM(F{s0}:F{r - 1})"
     ws.column_dimensions["A"].width = 60
     ws.column_dimensions["C"].width = 14
     ws.column_dimensions["D"].width = 40
     ws.column_dimensions["E"].width = 14
-    return infra_ref, (f"IF({A['team_plan']}=3,Infrastructure!$E${r},"
-                       f"Infrastructure!$C${r})")
+    ws.column_dimensions["F"].width = 18
+    t = A["team_plan"]
+    return infra_ref, (f"CHOOSE({t},Infrastructure!$C${r},Infrastructure!$C${r},"
+                       f"Infrastructure!$E${r},Infrastructure!$F${r})")
 
 
 # ------------------------------------------------------------------- Staffing
@@ -419,7 +446,13 @@ STAFF = [
      "Security questionnaires, audits."),
     ("Account executive #2", 13000, 16, 13000, 22, 13000, 99, ""),
     ("Engineer #4", 18000, 19, 18000, 28, 18000, 99, ""),
+    ("Contract developer, part-time (maintenance and improvements)", 0, 99, 0, 99, 0, 99,
+     "Side line only: after the MVP is delivered (MVP build is in Setup)."),
 ]
+
+# Side line: two unpaid partners, so only contractors are paid. Same row order as STAFF.
+SIDE_LINE = [(0, 99), (0, 99), (0, 99), (0, 99), (1500, 3), (0, 99), (0, 99), (0, 99),
+             (0, 99), (0, 99), (0, 99), (4000, 7)]
 
 
 def build_staffing(wb):
@@ -427,72 +460,84 @@ def build_staffing(wb):
     title(ws, "Team plans (loaded monthly cost = salary x ~1.25 / 12)",
           "Pick the plan in Assumptions. Start month 99 = not hired within 36 months.")
     heads = ["Role", "Full: $/mo", "Full: start", "Lean: $/mo", "Lean: start",
-             "Very lean: $/mo", "Very lean: start", "Note"]
-    for col, h in zip("ACDEFGHI", heads):
+             "Very lean: $/mo", "Very lean: start", "Side line: $/mo", "Side line: start",
+             "Note"]
+    for col, h in zip("ACDEFGHIJK", heads):
         style(ws[f"{col}4"], F_BOLD, fill=FILL_HEAD).value = h
+    assert len(SIDE_LINE) == len(STAFF)
     r = 5
-    for role, *vals, note in STAFF:
+    for (role, *vals, note), sl in zip(STAFF, SIDE_LINE):
         ws.cell(r, 1, role).font = F_BODY
-        for j, v in enumerate(vals):
+        for j, v in enumerate(list(vals) + list(sl)):
             style(ws.cell(r, 3 + j), F_INPUT, USD if j % 2 == 0 else NUM).value = v
-        style(ws.cell(r, 9), F_NOTE).value = note
+        style(ws.cell(r, 11), F_NOTE).value = note
         r += 1
-    ws.column_dimensions["A"].width = 46
-    for col in "CDEFGH":
-        ws.column_dimensions[col].width = 15
-    ws.column_dimensions["I"].width = 80
+    ws.column_dimensions["A"].width = 52
+    for col in "CDEFGHIJ":
+        ws.column_dimensions[col].width = 14
+    ws.column_dimensions["K"].width = 80
     last = r - 1
-    return tuple(f"Staffing!${c}$5:${c}${last}" for c in "CDEFGH")
+    return tuple(f"Staffing!${c}$5:${c}${last}" for c in "CDEFGHIJ")
 
 
 # ---------------------------------------------------------------------- Setup
 SETUP = [
-    # item, full/lean cost, very lean cost, month
-    ("Entity formation, founder/IP agreements, cap table", 6000, 3000, 1),
+    # item, full/lean cost, very lean cost, side-line cost, month
+    ("Entity formation, founder/IP agreements, cap table", 6000, 3000, 2500, 1),
     ("Legal review: broker agreement, disclaimers, ECOA/Reg B and UPL guardrails",
-     25000, 10000, 1),
-    ("Terms of service, DPA, privacy policy, AI-use disclosures, MSA template", 12000, 8000, 2),
-    ("Trademark search and filing", 3000, 1500, 2),
-    ("Brand, website, product design system", 25000, 6000, 2),
-    ("Lending template library: package, spreading, broker profiles (SME time)", 15000, 5000, 3),
-    ("Evaluation dataset: synthetic loan packages + expert grading", 15000, 5000, 4),
-    ("Laptops and equipment (5 full / 2 very lean)", 15000, 6000, 1),
-    ("SOC 2 readiness consultant (very lean: self-serve via compliance software)", 15000, 0, 4),
-    ("SOC 2 Type I audit", 20000, 15000, 6),
-    ("Independent penetration test before launch", 18000, 10000, 6),
-    ("Launch marketing: conferences, association sponsorships, collateral", 15000, 3000, 6),
+     25000, 10000, 6000, 1),
+    ("Terms of service, DPA, privacy policy, AI-use disclosures, MSA template",
+     12000, 8000, 4000, 2),
+    ("Trademark search and filing", 3000, 1500, 0, 2),
+    ("Brand, website, product design system", 25000, 6000, 2000, 2),
+    ("Lending template library: package, spreading, broker profiles (SME time)",
+     15000, 5000, 0, 3),
+    ("Evaluation dataset: synthetic loan packages + expert grading", 15000, 5000, 1500, 4),
+    ("Laptops and equipment", 15000, 6000, 0, 1),
+    ("SOC 2 readiness consultant", 15000, 0, 0, 4),
+    ("SOC 2 Type I audit (side line: deferred until firms require it)", 20000, 15000, 0, 6),
+    ("Independent penetration test before launch", 18000, 10000, 6000, 6),
+    ("Launch marketing: conferences, association sponsorships, collateral", 15000, 3000, 1000, 6),
+    ("Contract developer: MVP milestone 1 (document intake + extraction)", 0, 0, 20000, 2),
+    ("Contract developer: MVP milestone 2 (analysis, workbook, loan package)", 0, 0, 20000, 4),
+    ("Contract developer: MVP milestone 3 (security hardening, billing, launch)", 0, 0, 20000, 6),
 ]
 
 
 def build_setup(wb, A):
     ws = wb.create_sheet("Setup")
     title(ws, "One-time setup costs", "Month = when the cost is paid. Estimates; get quotes.")
-    for col, h in zip("ACDE", ["Item", "Full / lean ($)", "Month", "Very lean ($)"]):
+    for col, h in zip("ACDEF", ["Item", "Full / lean ($)", "Month", "Very lean ($)",
+                                "Side line ($)"]):
         style(ws[f"{col}4"], F_BOLD, fill=FILL_HEAD).value = h
     r = 5
-    for item, cost, vl, month in SETUP:
+    for item, cost, vl, sl, month in SETUP:
         ws.cell(r, 1, item).font = F_BODY
         style(ws.cell(r, 3), F_INPUT, USD).value = cost
         style(ws.cell(r, 4), F_INPUT, NUM).value = month
         style(ws.cell(r, 5), F_INPUT, USD).value = vl
+        style(ws.cell(r, 6), F_INPUT, USD).value = sl
         r += 1
     ws.cell(r, 1, "Contingency (% of items above)").font = F_BODY
     style(ws.cell(r, 2), F_INPUT, PCT).value = 0.15
     style(ws.cell(r, 3), F_BODY, USD).value = f"=SUM(C5:C{r - 1})*B{r}"
     style(ws.cell(r, 4), F_INPUT, NUM).value = 1
     style(ws.cell(r, 5), F_BODY, USD).value = f"=SUM(E5:E{r - 1})*B{r}"
+    style(ws.cell(r, 6), F_BODY, USD).value = f"=SUM(F5:F{r - 1})*B{r}"
     r += 1
     style(ws.cell(r, 1), F_BOLD).value = "Total one-time setup"
     style(ws.cell(r, 3), F_BOLD, USD).value = f"=SUM(C5:C{r - 1})"
     style(ws.cell(r, 5), F_BOLD, USD).value = f"=SUM(E5:E{r - 1})"
+    style(ws.cell(r, 6), F_BOLD, USD).value = f"=SUM(F5:F{r - 1})"
     ws.column_dimensions["A"].width = 84
-    for col in "CDE":
+    for col in "CDEF":
         ws.column_dimensions[col].width = 14
     t = A["team_plan"]
     months = f"Setup!$D$5:$D${r - 1}"
-    monthly = (f"IF({t}=3,SUMIF({months},{{m}},Setup!$E$5:$E${r - 1}),"
-               f"SUMIF({months},{{m}},Setup!$C$5:$C${r - 1}))")
-    total = f"IF({t}=3,Setup!$E${r},Setup!$C${r})"
+    full = f"SUMIF({months},{{m}},Setup!$C$5:$C${r - 1})"
+    monthly = (f"CHOOSE({t},{full},{full},SUMIF({months},{{m}},Setup!$E$5:$E${r - 1}),"
+               f"SUMIF({months},{{m}},Setup!$F$5:$F${r - 1}))")
+    total = f"CHOOSE({t},Setup!$C${r},Setup!$C${r},Setup!$E${r},Setup!$F${r})"
     return monthly, total
 
 
@@ -500,14 +545,16 @@ def build_setup(wb, A):
 def build_monthly(wb, A, P, U, infra_ref, saas_ref, staff, setup):
     ws = wb.create_sheet("Monthly")
     title(ws, "36-month operating model ($)", "All cells are formulas over the input sheets.")
-    staff_cost, staff_start, lean_cost, lean_start, vl_cost, vl_start = staff
+    staff_cost, staff_start, lean_cost, lean_start, vl_cost, vl_start, sl_cost, sl_start = staff
     setup_monthly = setup[0]
     L = A["launch_month"]
     T = A["team_plan"]
     last_col = get_column_letter(FIRST_COL + MONTHS - 1)
 
-    def vl(key):  # very-lean override when team plan = 3
-        return f"IF({T}=3,{A['vl_' + key]},{A[key]})"
+    def plan(key, full=None):  # value by team plan: full, lean, very lean, side line
+        base = full if full is not None else A[key]
+        vlean = A.get("vl_" + key, base)
+        return f"CHOOSE({T},{base},{base},{vlean},{A['sl_' + key]})"
 
 
     rows = {}
@@ -538,7 +585,7 @@ def build_monthly(wb, A, P, U, infra_ref, saas_ref, staff, setup):
             f"={c}{{seats}}*{A['infra_var_seat']}+{c}{{end}}*{A['kms_per_account']}"),
         ("c_pay", "Payment processing", USD, lambda c, p: f"={c}{{rev}}*{A['payment_pct']}"),
         ("c_support", "Customer support staff", USD, lambda c, p:
-            f"=IF({c}{{live}}=1,IF(AND({T}=3,{c}{{end}}<={A['vl_support_threshold']}),0,"
+            f"=IF({c}{{live}}=1,IF({c}{{end}}<={plan('support_threshold', '0')},0,"
             f"MAX(1,ROUNDUP({c}{{end}}/{A['accts_per_csm']},0))*{A['csm_cost']}),0)"),
         ("cogs", "Total cost of revenue", USD, lambda c, p: f"=SUM({c}{{c_llm}}:{c}{{c_support}})"),
         ("gp", "Gross profit", USD, lambda c, p: f"={c}{{rev}}-{c}{{cogs}}"),
@@ -547,16 +594,17 @@ def build_monthly(wb, A, P, U, infra_ref, saas_ref, staff, setup):
         ("o_payroll", "Payroll (product, engineering, sales, G&A)", USD, lambda c, p:
             f"=CHOOSE({A['team_plan']},SUMPRODUCT(({staff_start}<={c}{{month}})*{staff_cost}),"
             f"SUMPRODUCT(({lean_start}<={c}{{month}})*{lean_cost}),"
-            f"SUMPRODUCT(({vl_start}<={c}{{month}})*{vl_cost}))"),
+            f"SUMPRODUCT(({vl_start}<={c}{{month}})*{vl_cost}),"
+            f"SUMPRODUCT(({sl_start}<={c}{{month}})*{sl_cost}))"),
         ("o_mkt", "Sales & marketing (CAC + base)", USD, lambda c, p:
-            f"={c}{{new}}*{A['cac']}+IF({c}{{month}}>={L}-2,{vl('base_marketing')},0)"),
+            f"={c}{{new}}*{plan('cac')}+IF({c}{{month}}>={L}-2,{plan('base_marketing')},0)"),
         ("o_saas", "Security & operations SaaS", USD, lambda c, p: f"={saas_ref}"),
-        ("o_ins", "Insurance", USD, lambda c, p: f"={A['insurance']}"),
-        ("o_prof", "Professional services", USD, lambda c, p: f"={vl('prof_services')}"),
+        ("o_ins", "Insurance", USD, lambda c, p: f"={plan('insurance')}"),
+        ("o_prof", "Professional services", USD, lambda c, p: f"={plan('prof_services')}"),
         ("o_comp", "Recurring compliance (SOC 2 Type II, pen tests)", USD, lambda c, p:
             f"=IF({c}{{month}}>={A['compliance_start']},"
-            f"IF({T}=3,{A['vl_compliance']},{A['compliance_recurring']}),0)"),
-        ("o_ga", "Other G&A", USD, lambda c, p: f"={vl('ga_other')}"),
+            f"{plan('compliance', A['compliance_recurring'])},0)"),
+        ("o_ga", "Other G&A", USD, lambda c, p: f"={plan('ga_other')}"),
         ("o_setup", "One-time setup costs", USD, lambda c, p:
             "=" + setup_monthly.replace("{m}", c + "{month}")),
         ("opex", "Total operating expenses", USD, lambda c, p:
@@ -606,14 +654,14 @@ def build_monthly(wb, A, P, U, infra_ref, saas_ref, staff, setup):
 
 
 # -------------------------------------------------------------------- Summary
-def build_summary(wb, A, P, U, R, setup_total, saas_ref, rows):
+def build_summary(wb, A, P, U, R, setup_total, infra_ref, saas_ref, rows):
     ws = wb["Summary"]
     title(ws, "LendAgent - business model summary",
           "Change inputs on Assumptions / Pricing / UnitCosts / Infrastructure / Staffing / Setup.")
     style(ws["A3"], F_BODY).value = "Scenario shown"
     style(ws["C3"], F_LINK).value = "=Assumptions!$G$3"
     style(ws["D3"], F_BODY).value = ('=CHOOSE(' + A["team_plan"] +
-                                     ',"Full team","Lean team","Very lean team")')
+                                     ',"Full team","Lean team","Very lean team","Side line")')
     items = [
         ("Cost to set up the business", None, None),
         ("One-time setup costs (legal, SOC 2, pen test, brand, equipment)", USD,
@@ -627,7 +675,7 @@ def build_summary(wb, A, P, U, R, setup_total, saas_ref, rows):
         ("Recommended funding for the business (peak need + 25% cushion)", USD, "={peak_capital}*1.25", "raise"),
         ("Monthly run-rate costs", None, None),
         ("Servers / hosting baseline per month (production)", USD,
-         "=Infrastructure!$C$18", "infra"),
+         "=" + infra_ref, "infra"),
         ("Security & operations SaaS per month", USD, "=" + saas_ref, "saas"),
         ("Total costs in month 12", USD, f"=INDEX({R['totcost']},12)", "cost_m12"),
         ("Total costs in month 36", USD, f"=INDEX({R['totcost']},36)", "cost_m36"),
@@ -641,7 +689,8 @@ def build_summary(wb, A, P, U, R, setup_total, saas_ref, rows):
          f"={{arpa}}*(1-{A['payment_pct']})-{{var_cost}}", "contribution"),
         ("Customer lifetime (months) = 1 / churn", NUM1, f"=1/{A['churn']}", "lifetime"),
         ("Lifetime value (LTV)", USD, "={contribution}*{lifetime}", "ltv"),
-        ("Customer acquisition cost (CAC)", USD, f"={A['cac']}", "cac"),
+        ("Customer acquisition cost (CAC)", USD,
+         f"=CHOOSE({A['team_plan']},{A['cac']},{A['cac']},{A['cac']},{A['sl_cac']})", "cac"),
         ("LTV / CAC", MULT, "=IFERROR({ltv}/{cac},0)", "ltv_cac"),
         ("CAC payback (months)", NUM1, "=IFERROR({cac}/{contribution},0)", "payback"),
         ("Milestones", None, None),
@@ -744,11 +793,10 @@ def build() -> dict:
     P = build_pricing(wb, A)
     U = build_unit_costs(wb)
     infra_ref, saas_ref = build_infra(wb, A)
-    assert infra_ref == "Infrastructure!$C$18"
     staff = build_staffing(wb)
     setup = build_setup(wb, A)
     R, rows = build_monthly(wb, A, P, U, infra_ref, saas_ref, staff, setup)
-    cells = build_summary(wb, A, P, U, R, setup[1], saas_ref, rows)
+    cells = build_summary(wb, A, P, U, R, setup[1], infra_ref, saas_ref, rows)
     build_readme(wb)
     wb.save(OUT)
     def cell(ref):
@@ -773,10 +821,10 @@ def recalc(path: Path) -> dict:
 
 # (label, growth scenario, team plan, price override for the three plans)
 RUNS = (
-    ("Slow growth (your plan)", 1, 3, None),
-    ("Slow growth at earlier $499 / $1,499 / $3,999", 1, 3, (499, 1499, 3999)),
-    ("Moderate growth", 2, 3, None),
-    ("Faster growth", 3, 3, None),
+    ("Side line, slow growth (your plan)", 1, 4, None),
+    ("Side line, moderate growth", 2, 4, None),
+    ("Side line, slow growth, at $499 / $1,499 / $3,999", 1, 4, (499, 1499, 3999)),
+    ("Very lean team (paid founder + engineer), slow growth", 1, 3, None),
 )
 
 
@@ -859,9 +907,13 @@ def write_report(results: dict):
     p = results[RUNS[0][0]]
     out = ["# Financial model results", "",
            "Generated by `build_model.py` from `LendAgent_Financial_Model.xlsx`, recalculated in "
-           "LibreOffice for each case. All cases use the **very lean team** and **flat monthly "
-           "pricing** ($999 / $2,499 / $6,999) with no share of broker commission, unless noted.",
-           "",
+           "LibreOffice for each case. Pricing is **flat monthly fees** ($999 / $2,499 / $6,999) "
+           "with no share of broker commission, unless noted.", "",
+           "**Side line** = two partners working from home with no salaries. A contract "
+           "developer builds the MVP ($60k in three milestones) and then maintains it part-time "
+           "($4k/mo). The broker partner tests and improves the agent and brings in the first "
+           "brokers. A part-time security contractor costs $1.5k/mo. The formal SOC 2 audit is "
+           "deferred until brokerage firms ask for it.", "",
            "Capital figures are **operating money for the software business** (salaries, "
            "servers, AI usage, marketing) until revenue covers costs. The business never lends "
            "or funds loans.", ""] + _table(results) + [
@@ -892,7 +944,7 @@ def _charts(results):
     axes[0].fill_between(months, main["rev"], color="#1f4e79", alpha=0.85,
                          label="Revenue (monthly fees)")
     axes[0].plot(months, main["totcost"], label="Total costs", color="#333333", lw=2)
-    axes[0].set_title("Your plan (slow growth, very lean): revenue vs. costs")
+    axes[0].set_title("Your plan (side line, slow growth): revenue vs. costs")
     axes[0].legend(frameon=False, loc="upper left")
     colors = ["#1f4e79", "#999999", "#b45f06", "#38761d"]
     styles = ["-", "--", "-", "-"]
